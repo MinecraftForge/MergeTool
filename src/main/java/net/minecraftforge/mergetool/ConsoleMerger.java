@@ -42,7 +42,14 @@ public class ConsoleMerger
                 @Override
                 public AnnotationVersion convert(String value)
                 {
-                    return AnnotationVersion.valueOf(value.toUpperCase(Locale.ENGLISH));
+                    try
+                    {
+                        return AnnotationVersion.valueOf(value.toUpperCase(Locale.ENGLISH));
+                    }
+                    catch (IllegalArgumentException e) //Invalid argument, lets try by version, wish there was a way to know before hand.
+                    {
+                        return AnnotationVersion.fromVersion(value);
+                    }
                 }
 
                 @Override
