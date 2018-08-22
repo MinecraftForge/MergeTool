@@ -56,11 +56,12 @@ public enum AnnotationVersion
             {
                 int year = Integer.parseInt(v.substring(0, 2));
                 int week = Integer.parseInt(v.substring(3, 5));
+                int date = (year * 100) + week;
 
-                if (year <= 14 && week < 2) //14w02a was first 1.8 snapshot
+                if (date < 1402) //14w02a was first 1.8 snapshot
                     return AnnotationVersion.CPW;
 
-                if (year <= 18 && week < 43) //18w43a was first 1.13 snapshot
+                if (date < 1743) //17w43a was first 1.13 snapshot
                     return AnnotationVersion.NMF;
 
                 return AnnotationVersion.API;
