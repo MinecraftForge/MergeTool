@@ -163,12 +163,11 @@ public class Merger
 
             if (this.annotation != null)
             {
-                for (Class<?> cls : new Class[]{this.annotation.holder, this.annotation.value})
+                for (String cls : this.annotation.getClasses())
                 {
-                    String path = cls.getName().replace(".", "/").concat(".class");
-                    byte[] data = getResourceBytes(path);
+                    byte[] data = getResourceBytes(cls + ".class");
 
-                    outJar.putNextEntry(getNewEntry(path));
+                    outJar.putNextEntry(getNewEntry(cls + ".class"));
                     outJar.write(data);
                 }
             }
@@ -264,6 +263,7 @@ public class Merger
         processFields(cClassNode, sClassNode);
         processMethods(cClassNode, sClassNode);
         processInners(cClassNode, sClassNode);
+        processInterfaces(cClassNode, sClassNode);
 
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         cClassNode.accept(writer);
@@ -296,6 +296,39 @@ public class Merger
         {
             if (!cIners.stream().anyMatch(e -> innerMatches(e, n)))
                 cIners.add(n);
+        }
+    }
+
+    private void processInterfaces(ClassNode cClass, ClassNode sClass)
+    {
+        List<String> cIntfs = cClass.interfaces;
+        List<String> sIntfs = sClass.interfaces;
+        List<String> cOnly = new ArrayList<>();
+        List<String> sOnly = new ArrayList<>();
+
+        for (String n : cIntfs)
+        {
+            if (!sIntfs.contains(n))
+            {
+                sIntfs.add(n);
+                cOnly.add(n);
+            }
+        }
+        for (String n : sIntfs)
+        {
+            if (!cIntfs.contains(n))
+            {
+                cIntfs.add(n);
+                sOnly.add(n);
+            }
+        }
+        Collections.sort(cIntfs); //Sort things, we're in obf territory but should stabilize things.
+        Collections.sort(sIntfs);
+
+        if (this.annotation != null && !cOnly.isEmpty() || !sOnly.isEmpty())
+        {
+            this.annotation.add(cClass, cOnly, sOnly);
+            this.annotation.add(sClass, cOnly, sOnly);
         }
     }
 
