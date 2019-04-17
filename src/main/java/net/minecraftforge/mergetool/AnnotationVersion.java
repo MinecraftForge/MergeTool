@@ -78,7 +78,8 @@ public enum AnnotationVersion
 
                 return AnnotationVersion.API;
             }
-            v = v.split("-")[0]; //Strip pre's
+            v = v.split(" ")[0]; //"1.14 Pre Release 1"
+            v = v.split("-")[0]; //"1.13-pre1"
             String[] pts = v.split("\\.");
             //int major = Integer.parseInt(pts[0]);
             int minor = Integer.parseInt(pts[1]);
