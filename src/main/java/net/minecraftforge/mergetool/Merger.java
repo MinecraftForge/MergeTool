@@ -52,6 +52,7 @@ public class Merger
     private final File server;
     private final File merged;
     private AnnotationVersion annotation = null;
+    private boolean annotationInject = true;
     private FieldName FIELD = new FieldName();
     private MethodDesc METHOD = new MethodDesc();
     private HashSet<String> whitelist = new HashSet<>();
@@ -65,9 +66,10 @@ public class Merger
         this.merged = merged;
     }
 
-    public Merger annotate(AnnotationVersion ano)
+    public Merger annotate(AnnotationVersion ano, boolean inject)
     {
         this.annotation = ano;
+        this.annotationInject = inject;
         return this;
     }
 
@@ -161,7 +163,7 @@ public class Merger
                 copyClass(sInJar, entry.getValue(), outJar, false);
             }
 
-            if (this.annotation != null)
+            if (this.annotation != null && this.annotationInject)
             {
                 for (String cls : this.annotation.getClasses())
                 {

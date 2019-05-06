@@ -36,6 +36,7 @@ public class ConsoleMerger
         OptionSpec<File> client = parser.accepts("client").withRequiredArg().ofType(File.class).required();
         OptionSpec<File> server = parser.accepts("server").withRequiredArg().ofType(File.class).required();
         OptionSpec<File> merged = parser.accepts("output").withRequiredArg().ofType(File.class).required();
+        OptionSpec<Boolean> inject = parser.accepts("inject").withOptionalArg().ofType(Boolean.class).defaultsTo(true);
         OptionSpec<AnnotationVersion> anno = parser.accepts("ann").withOptionalArg().ofType(AnnotationVersion.class).withValuesConvertedBy(
             new ValueConverter<AnnotationVersion>()
             {
@@ -83,7 +84,7 @@ public class ConsoleMerger
 
             if (options.has(anno))
             {
-                merge.annotate(options.valueOf(anno));
+                merge.annotate(options.valueOf(anno), !options.has(inject) || options.valueOf(inject));
             }
 
             try

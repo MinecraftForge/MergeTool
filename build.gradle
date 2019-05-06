@@ -40,10 +40,30 @@ shadowJar {
     manifest.attributes('Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger')
     manifest.attributes('Implementation-Version': project.version)
 }
-
+task cpwFML(type: Jar) {
+    classifier 'cpw'
+    from (sourceSets.main.output) {
+        include 'cpw/mods/fml/relauncher/**'
+    }
+}
+task forgeFML(type: Jar) {
+    classifier 'forge'
+    from (sourceSets.main.output) {
+        include 'net/minecraftforge/fml/relauncher/**'
+    }
+}
+task forgeAPI(type: Jar) {
+    classifier 'api'
+    from (sourceSets.main.output) {
+        include 'net/minecraftforge/api/distmarker/**'
+    }
+}
 artifacts {
     archives jar
     archives shadowJar
+    archives cpwFML
+    archives forgeFML
+    archives forgeAPI
 }
 
 dependencies {
