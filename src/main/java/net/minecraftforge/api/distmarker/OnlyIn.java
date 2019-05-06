@@ -49,5 +49,5 @@ import java.lang.annotation.Target;
 public @interface OnlyIn
 {
     public Dist value();
-    public Class<?> _interface();
+    public Class<?> _interface() default Object.class;
 }
