@@ -18,19 +18,6 @@
  */
 package net.minecraftforge.mergetool;
 
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
-import java.util.Map.Entry;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipOutputStream;
-
-import com.google.common.base.Equivalence;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -40,8 +27,28 @@ import org.objectweb.asm.tree.InnerClassNode;
 import org.objectweb.asm.tree.LineNumberNode;
 import org.objectweb.asm.tree.MethodNode;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 @SuppressWarnings("unchecked")
 public class Merger
@@ -342,14 +349,18 @@ public class Merger
         return classNode;
     }
 
+    private static <T, U> BiPredicate<? super U, ? super U> curry(Function<? super U, ? extends T> function, BiPredicate<? super T, ? super T> primary) {
+        return (a,b) -> primary.test(function.apply(a), function.apply(b));
+    }
+
     private void processFields(ClassNode cClass, ClassNode sClass)
     {
-        merge(cClass.name, sClass.name, cClass.fields, sClass.fields, Equivalence.equals().onResultOf(FIELD), FIELD, FIELD, FIELD);
+        merge(cClass.name, sClass.name, cClass.fields, sClass.fields, curry(FIELD, Objects::equals), FIELD, FIELD, FIELD);
     }
 
     private void processMethods(ClassNode cClass, ClassNode sClass)
     {
-        merge(cClass.name, sClass.name, cClass.methods, sClass.methods, Equivalence.equals().onResultOf(METHOD), METHOD, METHOD, METHOD);
+        merge(cClass.name, sClass.name, cClass.methods, sClass.methods, curry(METHOD, Objects::equals), METHOD, METHOD, METHOD);
     }
 
     private interface MemberAnnotator<T>
@@ -418,18 +429,18 @@ public class Merger
         }
     }
 
-    private <T> void merge(String cName, String sName, List<T> client, List<T> server, Equivalence<? super T> eq,
+    private <T> void merge(String cName, String sName, List<T> client, List<T> server, BiPredicate<? super T, ? super T> eq,
             MemberAnnotator<T> annotator, Function<T, String> toString, Comparator<T> compare)
     {
         // adding null to the end to not handle the index overflow in a special way
         client.add(null);
         server.add(null);
-        List<T> common = Lists.newArrayList();
+        List<T> common = new ArrayList<>();
         for(T ct : client)
         {
             for (T st : server)
             {
-                if (eq.equivalent(ct, st))
+                if (eq.test(ct, st))
                 {
                     common.add(ct);
                     break;
@@ -444,22 +455,22 @@ public class Merger
             T st = server.get(i);
             T mt = common.get(mi);
 
-            if (eq.equivalent(ct, st))
+            if (eq.test(ct, st))
             {
                 mi++;
-                if (!eq.equivalent(ct, mt))
+                if (!eq.test(ct, mt))
                     throw new IllegalStateException("merged list is in bad state: " + toString.apply(ct) + " " + toString.apply(st) + " " + toString.apply(mt));
                 if (DEBUG)
                     System.out.printf("%d/%d %d/%d Both Shared  : %s %s\n", i, client.size(), mi, common.size(), sName, toString.apply(st));
 
             }
-            else if(eq.equivalent(st, mt))
+            else if(eq.test(st, mt))
             {
                 server.add(i, annotator.process(ct, true));
                 if (DEBUG)
                     System.out.printf("%d/%d %d/%d Server *add* : %s %s\n", i, client.size(), mi, common.size(), sName, toString.apply(ct));
             }
-            else if (eq.equivalent(ct, mt))
+            else if (eq.test(ct, mt))
             {
                 client.add(i, annotator.process(st, false));
                 if (DEBUG)
