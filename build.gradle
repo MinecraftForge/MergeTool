@@ -67,11 +67,11 @@ artifacts {
 }
 
 dependencies {
-    compile 'org.ow2.asm:asm:6.2'
-    compile 'org.ow2.asm:asm-tree:6.2'
-    compile 'org.ow2.asm:asm-util:6.2'
-    compile 'com.google.guava:guava:25.1-jre'
-    compile 'net.sf.jopt-simple:jopt-simple:5.0.4'
+    implementation 'org.ow2.asm:asm:6.2'
+    implementation 'org.ow2.asm:asm-tree:6.2'
+    implementation 'org.ow2.asm:asm-util:6.2'
+    implementation 'com.google.guava:guava:25.1-jre'
+    implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
 }
 configurations { deployJars }
 uploadArchives {
