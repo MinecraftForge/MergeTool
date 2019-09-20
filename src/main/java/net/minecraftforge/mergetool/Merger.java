@@ -187,7 +187,7 @@ public class Merger
     private ZipEntry getNewEntry(String name)
     {
         ZipEntry ret = new ZipEntry(name);
-        ret.setTime(0); //Stabilize output as java will use current time if we don't set this.
+        ret.setTime(0x92D6688800L); //Stabilize output as java will use current time if we don't set this, we can't use 0 as older java versions output different jars for values less then 1980
         return ret;
     }
 
