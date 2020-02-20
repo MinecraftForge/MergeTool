@@ -14,7 +14,7 @@ pipeline {
     stages {
         stage('fetch') {
             steps {
-                git(url: 'https://github.com/MinecraftForge/MergeTool.git', changelog: true)
+                checkout scm
             }
         }
         stage('buildandtest') {
@@ -42,7 +42,7 @@ pipeline {
             }
             steps {
                 sh './gradlew ${GRADLE_ARGS} publish -PmavenPassword=${FORGE_MAVEN_PSW}'
-                sh 'curl --user ${FORGE_MAVEN} http://files.minecraftforge.net/maven/manage/promote/latest/net.minecraftforge.mergetool/${BUILD_NUMBER}'
+                sh 'curl --user ${FORGE_MAVEN} http://files.minecraftforge.net/maven/manage/promote/latest/net.minecraftforge.mergetool/${MYVERSION}'
             }
         }
     }
