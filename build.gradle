@@ -1,12 +1,14 @@
 plugins {
-  id 'net.minecrell.licenser' version '0.3'
-  id 'org.ajoberstar.grgit' version '2.3.0'
+  id 'net.minecrell.licenser' version '0.4'
+  id 'org.ajoberstar.grgit' version '3.0.0'
   id 'com.github.johnrengelman.shadow' version '2.0.4'
+  id 'com.github.ben-manes.versions' version '0.22.0'
 }
 
 apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'maven'
+apply plugin: 'maven-publish'
 
 group = 'net.minecraftforge'
 version = gitVersion()
@@ -17,11 +19,14 @@ repositories {
 }
 
 def gitVersion() {
-    def desc = grgit.describe(longDescr: true).split('-') as List
+    def raw = grgit.describe(longDescr: true, tags:true)
+    def desc = (raw == null ? '0.0-0-unknown' : grgit.describe(longDescr: true, tags:true)).split('-') as List
     def hash = desc.remove(desc.size() - 1)
     def offset = desc.remove(desc.size() - 1)
     def tag = desc.join('-')
-    def branch = grgit.branch.current().name    
+    def branch = grgit.branch.current().name
+	if (tag.startsWith(branch))
+		branch = 'master'
     return "${tag}.${offset}${t -> if (branch != 'master') t << '-' + branch}"
 }
 
@@ -39,6 +44,10 @@ shadowJar {
     classifier 'fatjar'
     manifest.attributes('Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger')
     manifest.attributes('Implementation-Version': project.version)
+}
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
 }
 task cpwFML(type: Jar) {
     classifier 'cpw'
@@ -60,6 +69,7 @@ task forgeAPI(type: Jar) {
 }
 artifacts {
     archives jar
+	archives sourcesJar
     archives shadowJar
     archives cpwFML
     archives forgeFML
@@ -72,61 +82,60 @@ dependencies {
     implementation 'org.ow2.asm:asm-util:6.2'
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
 }
+
 configurations { deployJars }
-uploadArchives {
-    repositories {
-        add project.repositories.mavenLocal()
-    }
-    repositories.mavenDeployer {
-        configuration = configurations.deployJars
 
-        if (project.hasProperty('mavenPassword')) {
-            logger.info('Publishing to files server')
-            repository(url: 'http://files.minecraftforge.net/maven/manage/upload') {
-                authentication(userName: 'forge', password: project.getProperty('mavenPassword'))
-            }
-        } else {
-            logger.info('Publishing to repo folder')
-            repository(url: 'file://localhost/' + project.file('repo').getAbsolutePath())
-        }
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+			artifact sourcesJar
+			artifact shadowJar
+			artifact cpwFML
+			artifact forgeFML
+			artifact forgeAPI
 
-        pom {
-            groupId = project.group
-            version = project.version
-            artifactId = project.archivesBaseName
-        }
-        pom.project {
-            name project.archivesBaseName
-            packaging 'jar'
-            description 'Merges two jar files together, useful for rebuilding Retroguard stripped jars.'
-            url 'https://github.com/MinecraftForge/MergeTool'
+			pom {
+				name = 'MergeTool'
+				description = 'Merges two jar files together, useful for rebuilding Retroguard stripped jars.'
+				url = 'https://github.com/MinecraftForge/MergeTool'
+				scm {
+					url = 'https://github.com/MinecraftForge/MergeTool'
+					connection = 'scm:git:git://github.com/MinecraftForge/MergeTool.git'
+					developerConnection = 'scm:git:git@github.com:MinecraftForge/MergeTool.git'
+				}
+				issueManagement {
+					system = 'github'
+					url = 'https://github.com/MinecraftForge/MergeTool/issues'
+				}
 
-            scm {
-                url 'https://github.com/MinecraftForge/MergeTool'
-                connection 'scm:git:git://github.com/MinecraftForge/MergeTool.git'
-                developerConnection 'scm:git:git@github.com:MinecraftForge/MergeTool.git'
-            }
+				licenses {
+					license {
+						name = 'LGPLv2.1'
+						url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
+					}
+				}
 
-            issueManagement {
-                system 'github'
-                url 'https://github.com/MinecraftForge/MergeTool/issues'
-            }
-
-            licenses {
-                license {
-                    name = 'LGPLv2.1'
-                    url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
-                    distribution 'repo'
-                }
-            }
-
-            developers {
-                developer {
-                    id 'LexManos'
-                    name 'Lex Manos'
-                    roles { role 'developer' }
-                }
-            }
-        }
-    }
+				developers {
+					developer {
+						id = 'LexManos'
+						name = 'Lex Manos'
+					}
+				}
+			}
+		}
+	}
+	repositories {
+		maven {
+			if (project.hasProperty('forgeMavenPassword')) {
+				credentials {
+					username project.properties.forgeMavenUser
+					password project.properties.forgeMavenPassword
+				}
+				url 'http://files.minecraftforge.net/maven/manage/upload'
+			} else {
+				url 'file://' + rootProject.file('repo').getAbsolutePath()
+			}
+		}
+	}
 }
