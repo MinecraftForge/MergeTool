@@ -77,9 +77,9 @@ artifacts {
 }
 
 dependencies {
-    implementation 'org.ow2.asm:asm:6.2'
-    implementation 'org.ow2.asm:asm-tree:6.2'
-    implementation 'org.ow2.asm:asm-util:6.2'
+    implementation 'org.ow2.asm:asm:6.0'
+    implementation 'org.ow2.asm:asm-tree:6.0'
+    implementation 'org.ow2.asm:asm-util:6.0'
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
 }
 

@@ -33,19 +33,19 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
@@ -272,7 +272,6 @@ public class Merger
         processFields(cClassNode, sClassNode);
         processMethods(cClassNode, sClassNode);
         processInners(cClassNode, sClassNode);
-        processInterfaces(cClassNode, sClassNode);
 
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         cClassNode.accept(writer);
@@ -308,39 +307,6 @@ public class Merger
         }
     }
 
-    private void processInterfaces(ClassNode cClass, ClassNode sClass)
-    {
-        List<String> cIntfs = cClass.interfaces;
-        List<String> sIntfs = sClass.interfaces;
-        List<String> cOnly = new ArrayList<>();
-        List<String> sOnly = new ArrayList<>();
-
-        for (String n : cIntfs)
-        {
-            if (!sIntfs.contains(n))
-            {
-                sIntfs.add(n);
-                cOnly.add(n);
-            }
-        }
-        for (String n : sIntfs)
-        {
-            if (!cIntfs.contains(n))
-            {
-                cIntfs.add(n);
-                sOnly.add(n);
-            }
-        }
-        Collections.sort(cIntfs); //Sort things, we're in obf territory but should stabilize things.
-        Collections.sort(sIntfs);
-
-        if (this.annotation != null && !cOnly.isEmpty() || !sOnly.isEmpty())
-        {
-            this.annotation.add(cClass, cOnly, sOnly);
-            this.annotation.add(sClass, cOnly, sOnly);
-        }
-    }
-
     private ClassNode getClassNode(byte[] data)
     {
         ClassReader reader = new ClassReader(data);
@@ -349,18 +315,174 @@ public class Merger
         return classNode;
     }
 
-    private static <T, U> BiPredicate<? super U, ? super U> curry(Function<? super U, ? extends T> function, BiPredicate<? super T, ? super T> primary) {
-        return (a,b) -> primary.test(function.apply(a), function.apply(b));
-    }
-
     private void processFields(ClassNode cClass, ClassNode sClass)
     {
-        merge(cClass.name, sClass.name, cClass.fields, sClass.fields, curry(FIELD, Objects::equals), FIELD, FIELD, FIELD);
+        List<FieldNode> cFields = cClass.fields;
+        List<FieldNode> sFields = sClass.fields;
+        String cFieldsStr = cFields.stream().map(e -> e.name).collect(Collectors.joining(", "));
+        String sFieldsStr = sFields.stream().map(e -> e.name).collect(Collectors.joining(", "));
+
+        int serverFieldIdx = 0;
+        if (DEBUG)
+            System.out.printf("B: Server List: [%s]\nB: Client List: [%s]\n", sFieldsStr, cFieldsStr);
+        for (int clientFieldIdx = 0; clientFieldIdx < cFields.size(); clientFieldIdx++)
+        {
+            FieldNode clientField = cFields.get(clientFieldIdx);
+            if (serverFieldIdx < sFields.size())
+            {
+                FieldNode serverField = sFields.get(serverFieldIdx);
+                if (!clientField.name.equals(serverField.name))
+                {
+                    boolean foundServerField = false;
+                    for (int serverFieldSearchIdx = serverFieldIdx + 1; serverFieldSearchIdx < sFields.size(); serverFieldSearchIdx++)
+                    {
+                        if (clientField.name.equals(sFields.get(serverFieldSearchIdx).name))
+                        {
+                            foundServerField = true;
+                            break;
+                        }
+                    }
+                    // Found a server field match ahead in the list - walk to it and add the missing server fields to the client
+                    if (foundServerField)
+                    {
+                        boolean foundClientField = false;
+                        for (int clientFieldSearchIdx = clientFieldIdx + 1; clientFieldSearchIdx < cFields.size(); clientFieldSearchIdx++)
+                        {
+                            if (serverField.name.equals(cFields.get(clientFieldSearchIdx).name))
+                            {
+                                foundClientField = true;
+                                break;
+                            }
+                        }
+                        if (!foundClientField)
+                        {
+                            FIELD.process(serverField, false);
+                            cFields.add(clientFieldIdx, serverField);
+                            if (DEBUG)
+                                System.out.printf("1. Server List: %s\n1. Client List: %s\nIdx: %d %d\n", sFieldsStr, cFieldsStr, serverFieldIdx, clientFieldIdx);
+                        }
+                    }
+                    else
+                    {
+                        FIELD.process(clientField, true);
+                        sFields.add(serverFieldIdx, clientField);
+                        if (DEBUG)
+                            System.out.printf("2. Server List: %s\n2. Client List: %s\nIdx: %d %d\n", sFieldsStr, cFieldsStr, serverFieldIdx, clientFieldIdx);
+                    }
+                }
+            }
+            else
+            {
+                FIELD.process(clientField, true);
+                sFields.add(serverFieldIdx, clientField);
+                if (DEBUG)
+                    System.out.printf("3. Server List: %s\n3. Client List: %s\nIdx: %d %d\n", sFieldsStr, cFieldsStr, serverFieldIdx, clientFieldIdx);
+            }
+            serverFieldIdx++;
+        }
+        if (DEBUG)
+            System.out.printf("A. Server List: %s\nA. Client List: %s\n", sFieldsStr, cFieldsStr);
+        if (sFields.size() != cFields.size())
+        {
+            for (int x = cFields.size(); x < sFields.size(); x++)
+            {
+                FieldNode sF = sFields.get(x);
+                FIELD.process(sF, true);
+                cFields.add(x++, sF);
+            }
+        }
+        if (DEBUG)
+            System.out.printf("E. Server List: %s\nE. Client List: %s\n", sFieldsStr, cFieldsStr);
     }
 
     private void processMethods(ClassNode cClass, ClassNode sClass)
     {
-        merge(cClass.name, sClass.name, cClass.methods, sClass.methods, curry(METHOD, Objects::equals), METHOD, METHOD, METHOD);
+        List<MethodNode> cMethods = cClass.methods;
+        List<MethodNode> sMethods = sClass.methods;
+        LinkedHashSet<MethodWrapper> allMethods = new LinkedHashSet<>();
+
+        int cPos = 0;
+        int sPos = 0;
+        int cLen = cMethods.size();
+        int sLen = sMethods.size();
+        String clientName = "";
+        String lastName = clientName;
+        String serverName = "";
+        while (cPos < cLen || sPos < sLen)
+        {
+            do
+            {
+                if (sPos >= sLen)
+                {
+                    break;
+                }
+                MethodNode sM = sMethods.get(sPos);
+                serverName = sM.name;
+                if (!serverName.equals(lastName) && cPos != cLen)
+                {
+                    if (DEBUG)
+                    {
+                        System.out.printf("Server -skip : %s %s %d (%s %d) %d [%s]\n", sClass.name, clientName, cLen - cPos, serverName, sLen - sPos, allMethods.size(), lastName);
+                    }
+                    break;
+                }
+                MethodWrapper mw = new MethodWrapper(sM);
+                mw.server = true;
+                allMethods.add(mw);
+                if (DEBUG)
+                {
+                    System.out.printf("Server *add* : %s %s %d (%s %d) %d [%s]\n", sClass.name, clientName, cLen - cPos, serverName, sLen - sPos, allMethods.size(), lastName);
+                }
+                sPos++;
+            } while (sPos < sLen);
+            do
+            {
+                if (cPos >= cLen)
+                {
+                    break;
+                }
+                MethodNode cM = cMethods.get(cPos);
+                lastName = clientName;
+                clientName = cM.name;
+                if (!clientName.equals(lastName) && sPos != sLen)
+                {
+                    if (DEBUG)
+                    {
+                        System.out.printf("Client -skip : %s %s %d (%s %d) %d [%s]\n", cClass.name, clientName, cLen - cPos, serverName, sLen - sPos, allMethods.size(), lastName);
+                    }
+                    break;
+                }
+                MethodWrapper mw = new MethodWrapper(cM);
+                mw.client = true;
+                allMethods.add(mw);
+                if (DEBUG)
+                {
+                    System.out.printf("Client *add* : %s %s %d (%s %d) %d [%s]\n", cClass.name, clientName, cLen - cPos, serverName, sLen - sPos, allMethods.size(), lastName);
+                }
+                cPos++;
+            } while (cPos < cLen);
+        }
+
+        cMethods.clear();
+        sMethods.clear();
+
+        for (MethodWrapper mw : allMethods)
+        {
+            if (DEBUG)
+            {
+                System.out.println(mw);
+            }
+            cMethods.add(mw.node);
+            sMethods.add(mw.node);
+            if (mw.server && mw.client)
+            {
+                // no op
+            }
+            else
+            {
+                METHOD.process(mw.node, mw.client);
+            }
+        }
     }
 
     private interface MemberAnnotator<T>
@@ -429,84 +551,61 @@ public class Merger
         }
     }
 
-    private <T> void merge(String cName, String sName, List<T> client, List<T> server, BiPredicate<? super T, ? super T> eq,
-            MemberAnnotator<T> annotator, Function<T, String> toString, Comparator<T> compare)
-    {
-        // adding null to the end to not handle the index overflow in a special way
-        client.add(null);
-        server.add(null);
-        List<T> common = new ArrayList<>();
-        for(T ct : client)
-        {
-            for (T st : server)
-            {
-                if (eq.test(ct, st))
-                {
-                    common.add(ct);
-                    break;
-                }
-            }
-        }
-
-        int i = 0, mi = 0;
-        for(; i < client.size(); i++)
-        {
-            T ct = client.get(i);
-            T st = server.get(i);
-            T mt = common.get(mi);
-
-            if (eq.test(ct, st))
-            {
-                mi++;
-                if (!eq.test(ct, mt))
-                    throw new IllegalStateException("merged list is in bad state: " + toString.apply(ct) + " " + toString.apply(st) + " " + toString.apply(mt));
-                if (DEBUG)
-                    System.out.printf("%d/%d %d/%d Both Shared  : %s %s\n", i, client.size(), mi, common.size(), sName, toString.apply(st));
-
-            }
-            else if(eq.test(st, mt))
-            {
-                server.add(i, annotator.process(ct, true));
-                if (DEBUG)
-                    System.out.printf("%d/%d %d/%d Server *add* : %s %s\n", i, client.size(), mi, common.size(), sName, toString.apply(ct));
-            }
-            else if (eq.test(ct, mt))
-            {
-                client.add(i, annotator.process(st, false));
-                if (DEBUG)
-                    System.out.printf("%d/%d %d/%d Client *add* : %s %s\n", i, client.size(), mi, common.size(), cName, toString.apply(st));
-            }
-            else // Both server and client add a new method before we get to the next common method... Lets try and prioritize one.
-            {
-                int diff = compare.compare(ct,  st);
-                if  (diff > 0)
-                {
-                    client.add(i, annotator.process(st, false));
-                    if (DEBUG)
-                        System.out.printf("%d/%d %d/%d Client *add* : %s %s\n", i, client.size(), mi, common.size(), cName, toString.apply(st));
-                }
-                else /* if (diff < 0) */ //Technically this should be <0 and we special case when they can't agree who goes first.. but for now just push the client's first.
-                {
-                    server.add(i, annotator.process(ct, true));
-                    if (DEBUG)
-                        System.out.printf("%d/%d %d/%d Server *add* : %s %s\n", i, client.size(), mi, common.size(), sName, toString.apply(ct));
-                }
-            }
-        }
-        if (i < server.size() || mi < common.size() || (client.size() != server.size()))
-        {
-            throw new IllegalStateException("merged list is in bad state: " + i + " " + mi);
-        }
-        // removing the null
-        client.remove(client.size() - 1);
-        server.remove(server.size() - 1);
-    }
-
     private byte[] getResourceBytes(String path) throws IOException
     {
         try (InputStream stream = Merger.class.getResourceAsStream("/" + path))
         {
             return readFully(stream);
+        }
+    }
+
+    private class MethodWrapper
+    {
+        private MethodNode node;
+        public boolean     client;
+        public boolean     server;
+
+        public MethodWrapper(MethodNode node)
+        {
+            this.node = node;
+        }
+
+        @Override
+        public boolean equals(Object obj)
+        {
+            if (obj == null || !(obj instanceof MethodWrapper))
+            {
+                return false;
+            }
+            MethodWrapper mw = (MethodWrapper) obj;
+            boolean eq = Objects.equals(node.name, mw.node.name) && Objects.equals(node.desc, mw.node.desc);
+            if (eq)
+            {
+                mw.client = client | mw.client;
+                mw.server = server | mw.server;
+                client = client | mw.client;
+                server = server | mw.server;
+                if (DEBUG)
+                {
+                    System.out.printf(" eq: %s %s\n", this, mw);
+                }
+            }
+            return eq;
+        }
+
+        @Override
+        public int hashCode()
+        {
+        	int ret = 1;
+        	ret = 31 * ret + (node.name == null ? 0 : node.name.hashCode());
+        	ret = 31 * ret + (node.desc == null ? 0 : node.desc.hashCode());
+            return ret;
+        }
+
+        @Override
+        public String toString()
+        {
+        	return "MethodWrapper[name=" + node.name + ",desc=" + node.desc + ",server=" + server + ",client=" + client + "]";
         }
     }
 }
