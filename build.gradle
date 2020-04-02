@@ -16,6 +16,7 @@ targetCompatibility = sourceCompatibility = compileJava.sourceCompatibility = co
 
 repositories {
     mavenCentral()
+    maven { url = 'https://files.minecraftforge.net/maven' }
 }
 
 def gitVersion() {
@@ -77,10 +78,11 @@ artifacts {
 }
 
 dependencies {
-    implementation 'org.ow2.asm:asm:6.2'
-    implementation 'org.ow2.asm:asm-tree:6.2'
-    implementation 'org.ow2.asm:asm-util:6.2'
+    implementation 'org.ow2.asm:asm:8.0'
+    implementation 'org.ow2.asm:asm-tree:8.0'
+    implementation 'org.ow2.asm:asm-util:8.0'
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
+    implementation 'net.minecraftforge:srgutils:0.2.+'
 }
 
 configurations { deployJars }

@@ -28,6 +28,7 @@ import org.objectweb.asm.Type;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.api.distmarker.OnlyIns;
+import net.minecraftforge.srgutils.MinecraftVersion;
 
 public enum AnnotationVersion
 {
@@ -41,6 +42,9 @@ public enum AnnotationVersion
     private final String interface_key;
     private final String client;
     private final String server;
+
+    private static final MinecraftVersion MC_8 = MinecraftVersion.from("14w02a");
+    private static final MinecraftVersion MC_13 = MinecraftVersion.from("17w43a");
 
     private AnnotationVersion(Class<?> holder, Class<?> value, String client, String server)
     {
@@ -64,30 +68,12 @@ public enum AnnotationVersion
 
         try
         {
-            if (v.length() == 6 && v.charAt(2) == 'w')
-            {
-                int year = Integer.parseInt(v.substring(0, 2));
-                int week = Integer.parseInt(v.substring(3, 5));
-                int date = (year * 100) + week;
-
-                if (date < 1402) //14w02a was first 1.8 snapshot
-                    return AnnotationVersion.CPW;
-
-                if (date < 1743) //17w43a was first 1.13 snapshot
-                    return AnnotationVersion.NMF;
-
-                return AnnotationVersion.API;
-            }
-            v = v.split(" ")[0]; //"1.14 Pre Release 1"
-            v = v.split("-")[0]; //"1.13-pre1"
-            String[] pts = v.split("\\.");
-            //int major = Integer.parseInt(pts[0]);
-            int minor = Integer.parseInt(pts[1]);
-            //int revision = pts.length > 2 ? Integer.parseInt(pts[2]) : 0;
-
-            return minor < 8  ? AnnotationVersion.CPW :
-                   minor < 13 ? AnnotationVersion.NMF :
-                                AnnotationVersion.API;
+            MinecraftVersion target = MinecraftVersion.from(v);
+            if (target.compareTo(MC_8) < 0)
+                return AnnotationVersion.CPW;
+            if (target.compareTo(MC_13) < 0)
+                return AnnotationVersion.NMF;
+            return AnnotationVersion.API;
         }
         catch (NumberFormatException e)
         {
