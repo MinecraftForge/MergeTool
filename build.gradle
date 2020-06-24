@@ -82,7 +82,7 @@ dependencies {
     implementation 'org.ow2.asm:asm-tree:8.0'
     implementation 'org.ow2.asm:asm-util:8.0'
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
-    implementation 'net.minecraftforge:srgutils:0.2.+'
+    implementation 'net.minecraftforge:srgutils:0.2.12'
 }
 
 configurations { deployJars }
