@@ -43,6 +43,7 @@ sourceSets {
 
 java {
 	toolchain.languageVersion = JavaLanguageVersion.of(8)
+	withSourcesJar()
 }
 
 jar {
@@ -54,9 +55,7 @@ shadowJar {
     manifest.attributes('Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger')
     manifest.attributes('Implementation-Version': project.version)
 }
-task sourcesJar(type: Jar) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
+sourcesJar {
 	from sourceSets.cpwFML.allSource
 	from sourceSets.forgeFML.allSource
 	from sourceSets.forgeAPI.allSource
@@ -75,7 +74,6 @@ task forgeAPI(type: Jar) {
 }
 artifacts {
     archives jar
-	archives sourcesJar
     archives shadowJar
     archives cpwFML
     archives forgeFML
@@ -100,7 +98,6 @@ publishing {
 	publications {
 		mavenJava(MavenPublication) {
 			from components.java
-			artifact sourcesJar
 			artifact shadowJar
 			artifact cpwFML
 			artifact forgeFML
