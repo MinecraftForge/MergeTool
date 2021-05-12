@@ -70,13 +70,6 @@ task forgeAPI(type: Jar) {
     classifier 'api'
     from sourceSets.forgeAPI.output
 }
-artifacts {
-    archives jar
-    archives shadowJar
-    archives cpwFML
-    archives forgeFML
-    archives forgeAPI
-}
 
 dependencies {
     implementation 'org.ow2.asm:asm:9.1'
@@ -90,7 +83,12 @@ dependencies {
     implementation sourceSets.forgeAPI.output
 }
 
-configurations { deployJars }
+artifacts {
+    archives shadowJar
+    archives cpwFML
+    archives forgeFML
+    archives forgeAPI
+}
 
 publishing {
     publications.create("mavenJava", MavenPublication) {
