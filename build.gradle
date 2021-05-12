@@ -52,8 +52,6 @@ jar {
 }
 shadowJar {
     classifier 'fatjar'
-    manifest.attributes('Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger')
-    manifest.attributes('Implementation-Version': project.version)
 }
 sourcesJar {
     from sourceSets.cpwFML.allSource
@@ -85,7 +83,7 @@ dependencies {
     implementation 'org.ow2.asm:asm-tree:9.1'
     implementation 'org.ow2.asm:asm-util:9.1'
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
-    implementation 'net.minecraftforge:srgutils:0.2.12'
+    implementation 'net.minecraftforge:srgutils:0.4.3'
 
     implementation sourceSets.cpwFML.output
     implementation sourceSets.forgeFML.output
