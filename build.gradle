@@ -11,7 +11,6 @@ apply plugin: 'maven-publish'
 
 group = 'net.minecraftforge'
 version = gitVersion()
-targetCompatibility = sourceCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
 
 repositories {
     mavenCentral()
@@ -40,6 +39,10 @@ sourceSets {
 	cpwFML
 	forgeFML
 	forgeAPI
+}
+
+java {
+	toolchain.languageVersion = JavaLanguageVersion.of(8)
 }
 
 jar {
