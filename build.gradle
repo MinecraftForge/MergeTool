@@ -95,40 +95,38 @@ dependencies {
 configurations { deployJars }
 
 publishing {
-	publications {
-		mavenJava(MavenPublication) {
-			from components.java
-			artifact shadowJar
-			artifact cpwFML
-			artifact forgeFML
-			artifact forgeAPI
+	publications.create("mavenJava", MavenPublication) {
+		from components.java
+		artifact shadowJar
+		artifact cpwFML
+		artifact forgeFML
+		artifact forgeAPI
 
-			pom {
-				name = 'MergeTool'
-				description = 'Merges two jar files together, useful for rebuilding Retroguard stripped jars.'
+		pom {
+			name = 'MergeTool'
+			description = 'Merges two jar files together, useful for rebuilding Retroguard stripped jars.'
+			url = 'https://github.com/MinecraftForge/MergeTool'
+			scm {
 				url = 'https://github.com/MinecraftForge/MergeTool'
-				scm {
-					url = 'https://github.com/MinecraftForge/MergeTool'
-					connection = 'scm:git:git://github.com/MinecraftForge/MergeTool.git'
-					developerConnection = 'scm:git:git@github.com:MinecraftForge/MergeTool.git'
-				}
-				issueManagement {
-					system = 'github'
-					url = 'https://github.com/MinecraftForge/MergeTool/issues'
-				}
+				connection = 'scm:git:git://github.com/MinecraftForge/MergeTool.git'
+				developerConnection = 'scm:git:git@github.com:MinecraftForge/MergeTool.git'
+			}
+			issueManagement {
+				system = 'github'
+				url = 'https://github.com/MinecraftForge/MergeTool/issues'
+			}
 
-				licenses {
-					license {
-						name = 'LGPLv2.1'
-						url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
-					}
+			licenses {
+				license {
+					name = 'LGPLv2.1'
+					url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
 				}
+			}
 
-				developers {
-					developer {
-						id = 'LexManos'
-						name = 'Lex Manos'
-					}
+			developers {
+				developer {
+					id = 'LexManos'
+					name = 'Lex Manos'
 				}
 			}
 		}
