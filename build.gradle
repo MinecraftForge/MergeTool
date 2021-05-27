@@ -1,22 +1,20 @@
 plugins {
-  id 'net.minecrell.licenser' version '0.4'
-  id 'org.ajoberstar.grgit' version '3.0.0'
-  id 'com.github.johnrengelman.shadow' version '2.0.4'
-  id 'com.github.ben-manes.versions' version '0.22.0'
+    id 'org.cadixdev.licenser' version '0.6.0'
+    id 'org.ajoberstar.grgit' version '4.1.0'
+    id 'com.github.johnrengelman.shadow' version '7.0.0'
+    id 'com.github.ben-manes.versions' version '0.38.0'
 }
 
 apply plugin: 'java'
 apply plugin: 'eclipse'
-apply plugin: 'maven'
 apply plugin: 'maven-publish'
 
 group = 'net.minecraftforge'
 version = gitVersion()
-targetCompatibility = sourceCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
 
 repositories {
     mavenCentral()
-    maven { url = 'https://files.minecraftforge.net/maven' }
+    maven { url = 'https://maven.minecraftforge.net' }
 }
 
 def gitVersion() {
@@ -26,15 +24,26 @@ def gitVersion() {
     def offset = desc.remove(desc.size() - 1)
     def tag = desc.join('-')
     def branch = grgit.branch.current().name
-	if (tag.startsWith(branch))
-		branch = 'master'
+    if (tag.startsWith(branch))
+        branch = 'master'
     return "${tag}.${offset}${t -> if (branch != 'master') t << '-' + branch}"
 }
 
 license {
-  header project.file('LICENSE-header.txt')
-  include 'net/minecraftforge/mergetool/**/*.java'
-  newLine false
+    header project.file('LICENSE-header.txt')
+    include 'net/minecraftforge/mergetool/**/*.java'
+    newLine false
+}
+
+sourceSets {
+    cpwFML
+    forgeFML
+    forgeAPI
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(8)
+    withSourcesJar()
 }
 
 jar {
@@ -43,101 +52,94 @@ jar {
 }
 shadowJar {
     classifier 'fatjar'
-    manifest.attributes('Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger')
-    manifest.attributes('Implementation-Version': project.version)
 }
-task sourcesJar(type: Jar) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
+sourcesJar {
+    from sourceSets.cpwFML.allSource
+    from sourceSets.forgeFML.allSource
+    from sourceSets.forgeAPI.allSource
 }
 task cpwFML(type: Jar) {
     classifier 'cpw'
-    from (sourceSets.main.output) {
-        include 'cpw/mods/fml/relauncher/**'
-    }
+    from sourceSets.cpwFML.output
 }
 task forgeFML(type: Jar) {
     classifier 'forge'
-    from (sourceSets.main.output) {
-        include 'net/minecraftforge/fml/relauncher/**'
-    }
+    from sourceSets.forgeFML.output
 }
 task forgeAPI(type: Jar) {
     classifier 'api'
-    from (sourceSets.main.output) {
-        include 'net/minecraftforge/api/distmarker/**'
-    }
+    from sourceSets.forgeAPI.output
 }
+
+dependencies {
+    implementation 'org.ow2.asm:asm:9.1'
+    implementation 'org.ow2.asm:asm-tree:9.1'
+    implementation 'org.ow2.asm:asm-util:9.1'
+    implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
+    implementation 'net.minecraftforge:srgutils:0.4.3'
+
+    implementation sourceSets.cpwFML.output
+    implementation sourceSets.forgeFML.output
+    implementation sourceSets.forgeAPI.output
+}
+
 artifacts {
-    archives jar
-	archives sourcesJar
     archives shadowJar
     archives cpwFML
     archives forgeFML
     archives forgeAPI
 }
 
-dependencies {
-    implementation 'org.ow2.asm:asm:8.0'
-    implementation 'org.ow2.asm:asm-tree:8.0'
-    implementation 'org.ow2.asm:asm-util:8.0'
-    implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
-    implementation 'net.minecraftforge:srgutils:0.2.12'
-}
-
-configurations { deployJars }
-
 publishing {
-	publications {
-		mavenJava(MavenPublication) {
-			from components.java
-			artifact sourcesJar
-			artifact shadowJar
-			artifact cpwFML
-			artifact forgeFML
-			artifact forgeAPI
+    publications.create("mavenJava", MavenPublication) {
+        from components.java
+        artifact cpwFML
+        artifact forgeFML
+        artifact forgeAPI
 
-			pom {
-				name = 'MergeTool'
-				description = 'Merges two jar files together, useful for rebuilding Retroguard stripped jars.'
-				url = 'https://github.com/MinecraftForge/MergeTool'
-				scm {
-					url = 'https://github.com/MinecraftForge/MergeTool'
-					connection = 'scm:git:git://github.com/MinecraftForge/MergeTool.git'
-					developerConnection = 'scm:git:git@github.com:MinecraftForge/MergeTool.git'
-				}
-				issueManagement {
-					system = 'github'
-					url = 'https://github.com/MinecraftForge/MergeTool/issues'
-				}
+        pom {
+            name = 'MergeTool'
+            description = 'Merges two jar files together, useful for rebuilding Retroguard stripped jars.'
+            url = 'https://github.com/MinecraftForge/MergeTool'
+            scm {
+                url = 'https://github.com/MinecraftForge/MergeTool'
+                connection = 'scm:git:git://github.com/MinecraftForge/MergeTool.git'
+                developerConnection = 'scm:git:git@github.com:MinecraftForge/MergeTool.git'
+            }
+            issueManagement {
+                system = 'github'
+                url = 'https://github.com/MinecraftForge/MergeTool/issues'
+            }
 
-				licenses {
-					license {
-						name = 'LGPLv2.1'
-						url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
-					}
-				}
+            licenses {
+                license {
+                    name = 'LGPLv2.1'
+                    url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
+                }
+            }
 
-				developers {
-					developer {
-						id = 'LexManos'
-						name = 'Lex Manos'
-					}
-				}
-			}
-		}
-	}
-	repositories {
-		maven {
-			if (project.hasProperty('forgeMavenPassword')) {
-				credentials {
-					username project.properties.forgeMavenUser
-					password project.properties.forgeMavenPassword
-				}
-				url 'https://files.minecraftforge.net/maven/manage/upload'
-			} else {
-				url 'file://' + rootProject.file('repo').getAbsolutePath()
-			}
-		}
-	}
+            developers {
+                developer {
+                    id = 'LexManos'
+                    name = 'Lex Manos'
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            if (System.env.MAVEN_USER) {
+                url 'https://maven.minecraftforge.net/'
+                authentication {
+                    basic(BasicAuthentication)
+                }
+                credentials {
+                    username = System.env.MAVEN_USER ?: 'not'
+                    password = System.env.MAVEN_PASSWORD ?: 'set'
+                }
+            } else {
+                url 'file://' + rootProject.file('repo').getAbsolutePath()
+            }
+        }
+    }
 }
