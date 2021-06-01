@@ -42,9 +42,11 @@ import java.lang.annotation.Target;
  * as the initializer is a separate piece of code to the actual field declaration, and will not be able to find
  * it's field on the wrong side.
  *
+ * Note, when applied on a package-info.java, this only applies to the package-info.java file itself.
+ * It is a reasonable assumption that the whole package will also be restricted to that distribution, but not a requirement.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR})
+@Target({ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.PACKAGE})
 @Repeatable(OnlyIns.class)
 public @interface OnlyIn
 {
