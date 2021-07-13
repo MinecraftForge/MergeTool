@@ -49,6 +49,9 @@ java {
 jar {
     manifest.attributes('Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger')
     manifest.attributes('Implementation-Version': project.version)
+    from sourceSets.cpwFML.output
+    from sourceSets.forgeFML.output
+    from sourceSets.forgeAPI.output
 }
 shadowJar {
     classifier 'fatjar'
