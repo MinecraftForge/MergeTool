@@ -63,9 +63,9 @@ task forgeAPI(type: Jar) {
 }
 
 dependencies {
-    implementation 'org.ow2.asm:asm:9.2'
-    implementation 'org.ow2.asm:asm-tree:9.2'
-    implementation 'org.ow2.asm:asm-util:9.2'
+    implementation 'org.ow2.asm:asm:9.3'
+    implementation 'org.ow2.asm:asm-tree:9.3'
+    implementation 'org.ow2.asm:asm-util:9.3'
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
     implementation 'net.minecraftforge:srgutils:0.4.11'
 
