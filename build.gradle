@@ -10,6 +10,7 @@ plugins {
 
 group = 'net.minecraftforge'
 version = gradleutils.getTagOffsetVersion()
+println('Version: ' + version)
 
 repositories {
     mavenCentral()
