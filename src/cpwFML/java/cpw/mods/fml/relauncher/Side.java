@@ -13,7 +13,7 @@
 package cpw.mods.fml.relauncher;
 
 public enum Side {
-    CLIENT, SERVER, BUKKIT;
+    CLIENT, SERVER;
 
     /**
      * @return If this is the server environment
