@@ -63,11 +63,11 @@ task forgeAPI(type: Jar) {
 }
 
 dependencies {
-    implementation 'org.ow2.asm:asm:9.3'
-    implementation 'org.ow2.asm:asm-tree:9.3'
-    implementation 'org.ow2.asm:asm-util:9.3'
+    implementation 'org.ow2.asm:asm:9.5'
+    implementation 'org.ow2.asm:asm-tree:9.5'
+    implementation 'org.ow2.asm:asm-util:9.5'
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
-    implementation 'net.minecraftforge:srgutils:0.4.11'
+    implementation 'net.minecraftforge:srgutils:0.4.15'
 
     implementation sourceSets.cpwFML.output
     implementation sourceSets.forgeFML.output
