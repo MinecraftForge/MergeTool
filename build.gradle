@@ -58,6 +58,7 @@ task forgeFML(type: Jar) {
     from sourceSets.forgeFML.output
 }
 task forgeAPI(type: Jar) {
+    manifest.attributes('Automatic-Module-Name': 'net.minecraftforge.mergetool.api')
     classifier 'api'
     from sourceSets.forgeAPI.output
 }
