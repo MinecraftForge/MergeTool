@@ -20,7 +20,7 @@
 package net.minecraftforge.api.distmarker;
 
 /**
- * A distribution of the minecraft game. There are two common distributions, and though
+ * A physical distribution of Minecraft. There are two common distributions, and though
  * much code is common between them, there are some specific pieces that are only present
  * in one or the other.
  * <ul>
@@ -29,6 +29,48 @@ package net.minecraftforge.api.distmarker;
  *     <li>{@link #DEDICATED_SERVER} is the <em>dedicated server</em> distribution,
  *     it contains a server, which can simulate the world and communicates via network.</li>
  * </ul>
+ * <p>
+ * When working with Dist-specific code, it is important to guard invocations such that
+ * classes invalid for the current Dist are not loaded.
+ * <p>
+ * This is done by obeying the following rules:<br>
+ * 1. All Dist-specific code must go in a separate class.<br>
+ * 2. All accesses to the Dist-specific class must be guarded by a Dist check.
+ * <p>
+ * Following these rules ensures that a Dist-induced classloading error will never occur.
+ * <p>
+ * An example of these rules in action is shown below:
+ * <p>
+ * <code><pre>
+ * // Class which accesses code that is only present in Dist.CLIENT
+ * public class ClientOnlyThings
+ * {
+ *     public static boolean isClientSingleplayer()
+ *     {
+ *         return Minecraft.getInstance().isSingleplayer();
+ *     }
+ * }
+ * 
+ * // Class which is loaded on both Dists.
+ * public class SharedClass 
+ * {
+ *     // Returns true if the client is playing singleplayer.
+ *     // Returns false if executed on the server (will never crash).
+ *     public static boolean isClientSingleplayer()
+ *     {
+ *         if(currentDist.isClient())
+ *         {
+ *             return ClientOnlyThings.isClientSingleplayer();
+ *         }
+ *         return false;
+ *     }
+ * }
+ * </pre></code>
+ * 
+ * In this example, any code can now call <code>SharedClass.isClientSingleplayer()</code> without guarding.<br>
+ * However, only code that is specific to Dist.CLIENT may call <code>ClientOnlyThings.isClientSingleplayer()<code>.
+ * 
+ * @apiNote How to access the current Dist will depend on the project. When using FML, it is in FMLEnvironment.dist
  */
 public enum Dist {
 
