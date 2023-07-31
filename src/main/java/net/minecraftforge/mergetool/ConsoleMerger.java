@@ -96,6 +96,8 @@ public class ConsoleMerger
         OptionSpec<File> server = parser.accepts("server").withRequiredArg().ofType(File.class).required();
         OptionSpec<File> merged = parser.accepts("output").withRequiredArg().ofType(File.class).required();
         OptionSpec<Boolean> inject = parser.accepts("inject").withOptionalArg().ofType(Boolean.class).defaultsTo(true);
+        OptionSpec<Void> data = parser.accepts("keep-data");
+        OptionSpec<Void> meta = parser.accepts("keep-meta");
         OptionSpec<AnnotationVersion> anno = parser.accepts("ann").withOptionalArg().ofType(AnnotationVersion.class).withValuesConvertedBy(AnnotationReader).defaultsTo(AnnotationVersion.API);
 
         try
@@ -114,6 +116,12 @@ public class ConsoleMerger
             if (options.has(anno))
                 merge.annotate(options.valueOf(anno), !options.has(inject) || options.valueOf(inject));
 
+            if (options.has(data))
+                merge.keepData();
+
+            if (options.has(meta))
+                merge.keepMeta();
+
             try
             {
                 merge.process();
@@ -125,7 +133,7 @@ public class ConsoleMerger
         }
         catch (OptionException e)
         {
-            System.out.println("Usage: ConsoleMerger --merge --client <ClientJar> --server <ServerJar> --output <MergedJar> [--ann CPW|NMF|API]");
+            System.out.println("Usage: ConsoleMerger --merge --client <ClientJar> --server <ServerJar> --output <MergedJar> [--ann CPW|NMF|API] [--keep-data] [--keep-meta]");
             e.printStackTrace();
         }
     }
