@@ -3,14 +3,14 @@ plugins {
     id 'eclipse'
     id 'maven-publish'
     id 'org.cadixdev.licenser' version '0.6.1'
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
-    id 'com.github.ben-manes.versions' version '0.42.0'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.github.ben-manes.versions' version '0.47.0'
     id 'net.minecraftforge.gradleutils' version '2.+'
 }
 
 group = 'net.minecraftforge'
 version = gradleutils.getTagOffsetVersion()
-println('Version: ' + version)
+println "Version: $version"
 
 repositories {
     mavenCentral()
@@ -34,32 +34,34 @@ java {
     withSourcesJar()
 }
 
-jar {
-    manifest.attributes('Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger')
-    manifest.attributes('Implementation-Version': project.version)
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes('Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger')
+        attributes('Implementation-Version': project.version)
+    }
     from sourceSets.cpwFML.output
     from sourceSets.forgeFML.output
     from sourceSets.forgeAPI.output
 }
-shadowJar {
-    classifier 'fatjar'
+tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar).configure {
+    archiveClassifier = 'fatjar'
 }
-sourcesJar {
+tasks.named('sourcesJar', Jar).configure {
     from sourceSets.cpwFML.allSource
     from sourceSets.forgeFML.allSource
     from sourceSets.forgeAPI.allSource
 }
-task cpwFML(type: Jar) {
-    classifier 'cpw'
+tasks.register('cpwFML', Jar) {
+    archiveClassifier = 'cpw'
     from sourceSets.cpwFML.output
 }
-task forgeFML(type: Jar) {
-    classifier 'forge'
+tasks.register('forgeFML', Jar) {
+    archiveClassifier = 'forge'
     from sourceSets.forgeFML.output
 }
-task forgeAPI(type: Jar) {
+tasks.register('forgeAPI', Jar) {
     manifest.attributes('Automatic-Module-Name': 'net.minecraftforge.mergetool.api')
-    classifier 'api'
+    archiveClassifier = 'api'
     from sourceSets.forgeAPI.output
 }
 
@@ -83,7 +85,7 @@ artifacts {
 }
 
 publishing {
-    publications.create("mavenJava", MavenPublication) {
+    publications.register('mavenJava', MavenPublication) {
         from components.java
         artifact cpwFML
         artifact forgeFML
