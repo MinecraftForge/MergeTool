@@ -11,5 +11,5 @@ jobs:
   build:
     uses: MinecraftForge/SharedActions/.github/workflows/gradle.yml@main
     with:
-      java: 17
+      java: 8
       tasks: "publish"
