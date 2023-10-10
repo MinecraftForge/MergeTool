@@ -1,3 +1,5 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     id 'java'
     id 'eclipse'
@@ -14,13 +16,16 @@ println "Version: $version"
 
 repositories {
     mavenCentral()
-    maven { url = 'https://maven.minecraftforge.net' }
+    maven {
+        name = 'MinecraftForge'
+        url = 'https://maven.minecraftforge.net'
+    }
 }
 
 license {
-    header project.file('LICENSE-header.txt')
+    header = file('LICENSE-header.txt')
     include 'net/minecraftforge/mergetool/**/*.java'
-    newLine false
+    newLine = false
 }
 
 sourceSets {
@@ -30,7 +35,9 @@ sourceSets {
 }
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(8)
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(8)
+    }
     withSourcesJar()
 }
 
@@ -43,22 +50,27 @@ tasks.named('jar', Jar).configure {
     from sourceSets.forgeFML.output
     from sourceSets.forgeAPI.output
 }
-tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar).configure {
+
+tasks.named('shadowJar', ShadowJar).configure {
     archiveClassifier = 'fatjar'
 }
+
 tasks.named('sourcesJar', Jar).configure {
     from sourceSets.cpwFML.allSource
     from sourceSets.forgeFML.allSource
     from sourceSets.forgeAPI.allSource
 }
+
 tasks.register('cpwFML', Jar) {
     archiveClassifier = 'cpw'
     from sourceSets.cpwFML.output
 }
+
 tasks.register('forgeFML', Jar) {
     archiveClassifier = 'forge'
     from sourceSets.forgeFML.output
 }
+
 tasks.register('forgeAPI', Jar) {
     manifest.attributes('Automatic-Module-Name': 'net.minecraftforge.mergetool.api')
     archiveClassifier = 'api'
@@ -90,6 +102,8 @@ publishing {
         artifact cpwFML
         artifact forgeFML
         artifact forgeAPI
+
+        artifactId = 'mergetool'
 
         pom {
             name = 'MergeTool'
