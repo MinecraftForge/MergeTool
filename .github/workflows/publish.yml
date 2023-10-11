@@ -12,4 +12,5 @@ jobs:
     uses: MinecraftForge/SharedActions/.github/workflows/gradle.yml@main
     with:
       java: 8
-      tasks: "publish"
+      gradle_tasks: "publish"
+      artifact_name: "mergetool"
