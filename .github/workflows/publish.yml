@@ -1,0 +1,16 @@
+name: Publish
+
+on:
+  push:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: MinecraftForge/SharedActions/.github/workflows/gradle.yml@main
+    with:
+      java: 8
+      gradle_tasks: "publish"
+      artifact_name: "mergetool"
