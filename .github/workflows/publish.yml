@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build:
-    uses: MinecraftForge/SharedActions/.github/workflows/gradle_ci.yml@main
+    uses: MinecraftForge/SharedActions/.github/workflows/gradle.yml@main
     with:
       java: 8
       gradle_tasks: "publish"
