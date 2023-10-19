@@ -1,4 +1,5 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import net.minecraftforge.gradleutils.PomUtils
 
 plugins {
     id 'java'
@@ -11,15 +12,12 @@ plugins {
 }
 
 group = 'net.minecraftforge'
-version = gradleutils.getTagOffsetVersion()
+version = gradleutils.tagOffsetVersion
 println "Version: $version"
 
 repositories {
     mavenCentral()
-    maven {
-        name = 'MinecraftForge'
-        url = 'https://maven.minecraftforge.net'
-    }
+    maven gradleutils.forgeMaven
 }
 
 license {
@@ -66,15 +64,33 @@ tasks.register('cpwFML', Jar) {
     from sourceSets.cpwFML.output
 }
 
+tasks.register('cpwFMLSources', Jar) {
+    from sourceSets.cpwFML.allSource
+    archiveClassifier = 'sources'
+    archiveBaseName = 'mergetool-cpw'
+}
+
 tasks.register('forgeFML', Jar) {
     archiveClassifier = 'forge'
     from sourceSets.forgeFML.output
+}
+
+tasks.register('forgeFMLSources', Jar) {
+    from sourceSets.forgeFML.allSource
+    archiveClassifier = 'sources'
+    archiveBaseName = 'mergetool-fml'
 }
 
 tasks.register('forgeAPI', Jar) {
     manifest.attributes('Automatic-Module-Name': 'net.minecraftforge.mergetool.api')
     archiveClassifier = 'api'
     from sourceSets.forgeAPI.output
+}
+
+tasks.register('forgeAPISources', Jar) {
+    from sourceSets.forgeAPI.allSource
+    archiveClassifier = 'sources'
+    archiveBaseName = 'mergetool-api'
 }
 
 dependencies {
@@ -91,17 +107,11 @@ dependencies {
 
 artifacts {
     archives shadowJar
-    archives cpwFML
-    archives forgeFML
-    archives forgeAPI
 }
 
 publishing {
     publications.register('mavenJava', MavenPublication) {
         from components.java
-        artifact cpwFML
-        artifact forgeFML
-        artifact forgeAPI
 
         artifactId = 'mergetool'
 
@@ -109,31 +119,84 @@ publishing {
             name = 'MergeTool'
             description = 'Merges two jar files together, useful for rebuilding Retroguard stripped jars.'
             url = 'https://github.com/MinecraftForge/MergeTool'
-            scm {
-                url = 'https://github.com/MinecraftForge/MergeTool'
-                connection = 'scm:git:git://github.com/MinecraftForge/MergeTool.git'
-                developerConnection = 'scm:git:git@github.com:MinecraftForge/MergeTool.git'
-            }
-            issueManagement {
-                system = 'github'
-                url = 'https://github.com/MinecraftForge/MergeTool/issues'
-            }
+            
+            PomUtils.setGitHubDetails(pom, 'MergeTool')
 
-            licenses {
-                license {
-                    name = 'LGPLv2.1'
-                    url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
-                }
-            }
+            license PomUtils.Licenses.LGPLv2_1
 
             developers {
-                developer {
-                    id = 'LexManos'
-                    name = 'Lex Manos'
-                }
+                developer PomUtils.Developers.LexManos
             }
         }
     }
+    
+    publications.register('mavenJavaApi', MavenPublication) {
+        artifact source: forgeAPI, classifier: ''
+        artifact forgeAPISources
+
+        artifactId = 'mergetool-api'
+        version = '1.0'
+
+        pom {
+            name = 'MergeTool-API'
+            description = 'API Markers for Merging Two jars together. See https://github.com/MinecraftForge/MergeTool'
+            url = 'https://github.com/MinecraftForge/MergeTool'
+            
+            PomUtils.setGitHubDetails(pom, 'MergeTool')
+
+            license PomUtils.Licenses.LGPLv2_1
+
+            developers {
+                developer PomUtils.Developers.LexManos
+            }
+        }
+    }
+    
+    publications.register('mavenJavaCpw', MavenPublication) {
+        artifact source: cpwFML, classifier: ''
+        artifact cpwFMLSources
+
+        artifactId = 'mergetool-cpw'
+        version = '1.0'
+
+        pom {
+            name = 'MergeTool-cpw'
+            description = 'API Markers for Merging Two jars together. See https://github.com/MinecraftForge/MergeTool'
+            url = 'https://github.com/MinecraftForge/MergeTool'
+            
+            PomUtils.setGitHubDetails(pom, 'MergeTool')
+
+            license PomUtils.Licenses.LGPLv2_1
+
+            developers {
+                developer PomUtils.Developers.cpw
+            }
+        }
+    }
+    
+    publications.register('mavenJavaFML', MavenPublication) {
+        artifact source: forgeFML, classifier: ''
+        artifact forgeFMLSources
+
+        artifactId = 'mergetool-fml'
+        version = '1.0'
+
+        pom {
+            name = 'MergeTool-fml'
+            description = 'API Markers for Merging Two jars together. See https://github.com/MinecraftForge/MergeTool'
+            url = 'https://github.com/MinecraftForge/MergeTool'
+            
+            PomUtils.setGitHubDetails(pom, 'MergeTool')
+
+            license PomUtils.Licenses.LGPLv2_1
+
+            developers {
+                developer PomUtils.Developers.cpw
+            }
+        }
+    }
+    
+    
     repositories {
         maven gradleutils.getPublishingForgeMaven()
     }
