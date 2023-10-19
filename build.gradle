@@ -22,14 +22,7 @@ repositories {
 
 license {
     header = file('LICENSE-header.txt')
-    include 'net/minecraftforge/mergetool/**/*.java'
     newLine = false
-}
-
-sourceSets {
-    cpwFML
-    forgeFML
-    forgeAPI
 }
 
 java {
@@ -40,57 +33,24 @@ java {
 }
 
 tasks.named('jar', Jar).configure {
+    from(configurations.markers.collect { zipTree(it) } ) {
+        into 'markers'
+        include '**/*.class'
+        rename { it.replace('.class', '.marker') }
+    }
     manifest {
         attributes('Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger')
         attributes('Implementation-Version': project.version)
     }
-    from sourceSets.cpwFML.output
-    from sourceSets.forgeFML.output
-    from sourceSets.forgeAPI.output
 }
 
 tasks.named('shadowJar', ShadowJar).configure {
     archiveClassifier = 'fatjar'
 }
 
-tasks.named('sourcesJar', Jar).configure {
-    from sourceSets.cpwFML.allSource
-    from sourceSets.forgeFML.allSource
-    from sourceSets.forgeAPI.allSource
-}
-
-tasks.register('cpwFML', Jar) {
-    archiveClassifier = 'cpw'
-    from sourceSets.cpwFML.output
-}
-
-tasks.register('cpwFMLSources', Jar) {
-    from sourceSets.cpwFML.allSource
-    archiveClassifier = 'sources'
-    archiveBaseName = 'mergetool-cpw'
-}
-
-tasks.register('forgeFML', Jar) {
-    archiveClassifier = 'forge'
-    from sourceSets.forgeFML.output
-}
-
-tasks.register('forgeFMLSources', Jar) {
-    from sourceSets.forgeFML.allSource
-    archiveClassifier = 'sources'
-    archiveBaseName = 'mergetool-fml'
-}
-
-tasks.register('forgeAPI', Jar) {
-    manifest.attributes('Automatic-Module-Name': 'net.minecraftforge.mergetool.api')
-    archiveClassifier = 'api'
-    from sourceSets.forgeAPI.output
-}
-
-tasks.register('forgeAPISources', Jar) {
-    from sourceSets.forgeAPI.allSource
-    archiveClassifier = 'sources'
-    archiveBaseName = 'mergetool-api'
+configurations {
+    markers
+    implementation.extendsFrom(markers)
 }
 
 dependencies {
@@ -99,10 +59,10 @@ dependencies {
     implementation 'org.ow2.asm:asm-util:9.5'
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
     implementation 'net.minecraftforge:srgutils:0.4.15'
-
-    implementation sourceSets.cpwFML.output
-    implementation sourceSets.forgeFML.output
-    implementation sourceSets.forgeAPI.output
+    
+    markers 'net.minecraftforge:mergetool-cpw:1.0'
+    markers 'net.minecraftforge:mergetool-fml:1.0'
+    markers 'net.minecraftforge:mergetool-api:1.0'
 }
 
 artifacts {
@@ -129,73 +89,6 @@ publishing {
             }
         }
     }
-    
-    publications.register('mavenJavaApi', MavenPublication) {
-        artifact source: forgeAPI, classifier: ''
-        artifact forgeAPISources
-
-        artifactId = 'mergetool-api'
-        version = '1.0'
-
-        pom {
-            name = 'MergeTool-API'
-            description = 'API Markers for Merging Two jars together. See https://github.com/MinecraftForge/MergeTool'
-            url = 'https://github.com/MinecraftForge/MergeTool'
-            
-            PomUtils.setGitHubDetails(pom, 'MergeTool')
-
-            license PomUtils.Licenses.LGPLv2_1
-
-            developers {
-                developer PomUtils.Developers.LexManos
-            }
-        }
-    }
-    
-    publications.register('mavenJavaCpw', MavenPublication) {
-        artifact source: cpwFML, classifier: ''
-        artifact cpwFMLSources
-
-        artifactId = 'mergetool-cpw'
-        version = '1.0'
-
-        pom {
-            name = 'MergeTool-cpw'
-            description = 'API Markers for Merging Two jars together. See https://github.com/MinecraftForge/MergeTool'
-            url = 'https://github.com/MinecraftForge/MergeTool'
-            
-            PomUtils.setGitHubDetails(pom, 'MergeTool')
-
-            license PomUtils.Licenses.LGPLv2_1
-
-            developers {
-                developer PomUtils.Developers.cpw
-            }
-        }
-    }
-    
-    publications.register('mavenJavaFML', MavenPublication) {
-        artifact source: forgeFML, classifier: ''
-        artifact forgeFMLSources
-
-        artifactId = 'mergetool-fml'
-        version = '1.0'
-
-        pom {
-            name = 'MergeTool-fml'
-            description = 'API Markers for Merging Two jars together. See https://github.com/MinecraftForge/MergeTool'
-            url = 'https://github.com/MinecraftForge/MergeTool'
-            
-            PomUtils.setGitHubDetails(pom, 'MergeTool')
-
-            license PomUtils.Licenses.LGPLv2_1
-
-            developers {
-                developer PomUtils.Developers.cpw
-            }
-        }
-    }
-    
     
     repositories {
         maven gradleutils.getPublishingForgeMaven()

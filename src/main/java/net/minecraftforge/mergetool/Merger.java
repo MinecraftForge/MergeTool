@@ -174,7 +174,7 @@ public class Merger
             {
                 for (String cls : this.annotation.getClasses())
                 {
-                    byte[] data = getResourceBytes(cls + ".class");
+                    byte[] data = getResourceBytes(cls);
 
                     outJar.putNextEntry(getNewEntry(cls + ".class"));
                     outJar.write(data);
@@ -504,9 +504,17 @@ public class Merger
 
     private byte[] getResourceBytes(String path) throws IOException
     {
-        try (InputStream stream = Merger.class.getResourceAsStream("/" + path))
-        {
+        // If we're in the built jar, use the relocated classes {prevents them being
+        InputStream stream = Merger.class.getResourceAsStream("/markers/" + path + ".marker");
+        // If not, then try and get them from the classpath
+        if (stream == null)
+            stream = Merger.class.getResourceAsStream("/" + path + ".class");
+        if (stream == null)
+            throw new IllegalStateException("Could not find marker files: " + path);
+        try {
             return readFully(stream);
+        } finally {
+            stream.close();
         }
     }
 }
