@@ -63,6 +63,7 @@ public class Merger
     private FieldName FIELD = new FieldName();
     private MethodDesc METHOD = new MethodDesc();
     private HashSet<String> whitelist = new HashSet<>();
+    private HashSet<String> blacklist = new HashSet<>();
     private boolean copyData = false;
     private boolean keepMeta = false;
 
@@ -83,6 +84,12 @@ public class Merger
     public Merger whitelist(String file)
     {
         this.whitelist.add(file);
+        return this;
+    }
+
+    public Merger blacklist(String file)
+    {
+        this.blacklist.add(file);
         return this;
     }
 
@@ -125,7 +132,10 @@ public class Merger
             {
                 String name = entry.getKey();
 
-                if (!this.whitelist.isEmpty() && !this.whitelist.contains(name))
+                if (!this.whitelist.isEmpty() && this.whitelist.stream().noneMatch(name::contains))
+                    continue;
+
+                if (!this.blacklist.isEmpty() && this.blacklist.stream().anyMatch(name::contains))
                     continue;
 
                 ZipEntry cEntry = entry.getValue();
@@ -160,7 +170,10 @@ public class Merger
 
             for (Entry<String, ZipEntry> entry : sClasses.entrySet())
             {
-                if (!this.whitelist.isEmpty() && !this.whitelist.contains(entry.getKey()))
+                if (!this.whitelist.isEmpty() && this.whitelist.stream().noneMatch(entry.getKey()::contains))
+                    continue;
+
+                if (!this.blacklist.isEmpty() && this.blacklist.stream().anyMatch(entry.getKey()::contains))
                     continue;
 
                 if (DEBUG)

@@ -99,6 +99,8 @@ public class ConsoleMerger
         OptionSpec<Void> data = parser.accepts("keep-data");
         OptionSpec<Void> meta = parser.accepts("keep-meta");
         OptionSpec<AnnotationVersion> anno = parser.accepts("ann").withOptionalArg().ofType(AnnotationVersion.class).withValuesConvertedBy(AnnotationReader).defaultsTo(AnnotationVersion.API);
+        OptionSpec<String> whitelist = parser.accepts("whitelist").withOptionalArg();
+        OptionSpec<String> blacklist = parser.accepts("blacklist").withOptionalArg();
 
         try
         {
@@ -121,6 +123,13 @@ public class ConsoleMerger
 
             if (options.has(meta))
                 merge.keepMeta();
+
+            if (options.has(whitelist))
+                options.valuesOf(whitelist).forEach(merge::whitelist);
+
+            if (options.has(blacklist)) {
+                options.valuesOf(blacklist).forEach(merge::blacklist);
+            }
 
             try
             {
