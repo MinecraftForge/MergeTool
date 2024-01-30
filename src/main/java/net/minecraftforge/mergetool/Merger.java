@@ -18,6 +18,7 @@
  */
 package net.minecraftforge.mergetool;
 
+import net.minecraftforge.srgutils.IMappingFile;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -46,6 +47,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
@@ -64,6 +66,8 @@ public class Merger
     private MethodDesc METHOD = new MethodDesc();
     private HashSet<String> whitelist = new HashSet<>();
     private HashSet<String> blacklist = new HashSet<>();
+    private HashSet<String> clientMapping = new HashSet<>();
+    private HashSet<String> serverMapping = new HashSet<>();
     private boolean copyData = false;
     private boolean keepMeta = false;
 
@@ -87,9 +91,39 @@ public class Merger
         return this;
     }
 
+    public Merger clientMapping(File file)
+    {
+        try
+        {
+            this.clientMapping = IMappingFile.load(file).getClasses().stream()
+                    .map(IMappingFile.IClass::getOriginal)
+                    .collect(Collectors.toCollection(HashSet::new));
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+        return this;
+    }
+
     public Merger blacklist(String file)
     {
         this.blacklist.add(file);
+        return this;
+    }
+
+    public Merger serverMapping(File file)
+    {
+        try
+        {
+            this.serverMapping = IMappingFile.load(file).getClasses().stream()
+                    .map(IMappingFile.IClass::getOriginal)
+                    .collect(Collectors.toCollection(HashSet::new));
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
         return this;
     }
 
@@ -132,10 +166,13 @@ public class Merger
             {
                 String name = entry.getKey();
 
-                if (!this.whitelist.isEmpty() && this.whitelist.stream().noneMatch(name::contains))
+                if (!this.whitelist.isEmpty() && !this.whitelist.contains(name))
                     continue;
 
-                if (!this.blacklist.isEmpty() && this.blacklist.stream().anyMatch(name::contains))
+                if (!this.blacklist.isEmpty() && this.blacklist.contains(name))
+                    continue;
+
+                if (!this.clientMapping.isEmpty() && !this.clientMapping.contains(name))
                     continue;
 
                 ZipEntry cEntry = entry.getValue();
@@ -170,10 +207,13 @@ public class Merger
 
             for (Entry<String, ZipEntry> entry : sClasses.entrySet())
             {
-                if (!this.whitelist.isEmpty() && this.whitelist.stream().noneMatch(entry.getKey()::contains))
+                if (!this.whitelist.isEmpty() && !this.whitelist.contains(entry.getKey()))
                     continue;
 
-                if (!this.blacklist.isEmpty() && this.blacklist.stream().anyMatch(entry.getKey()::contains))
+                if (!this.blacklist.isEmpty() && this.blacklist.contains(entry.getKey()))
+                    continue;
+
+                if (!this.serverMapping.isEmpty() && !this.serverMapping.contains(entry.getKey()))
                     continue;
 
                 if (DEBUG)

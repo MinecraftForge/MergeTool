@@ -101,6 +101,8 @@ public class ConsoleMerger
         OptionSpec<AnnotationVersion> anno = parser.accepts("ann").withOptionalArg().ofType(AnnotationVersion.class).withValuesConvertedBy(AnnotationReader).defaultsTo(AnnotationVersion.API);
         OptionSpec<String> whitelist = parser.accepts("whitelist").withOptionalArg();
         OptionSpec<String> blacklist = parser.accepts("blacklist").withOptionalArg();
+        OptionSpec<File> clientMapping = parser.accepts("clientMapping").withOptionalArg().ofType(File.class);
+        OptionSpec<File> serverMapping = parser.accepts("serverMapping").withOptionalArg().ofType(File.class);
 
         try
         {
@@ -127,9 +129,14 @@ public class ConsoleMerger
             if (options.has(whitelist))
                 options.valuesOf(whitelist).forEach(merge::whitelist);
 
-            if (options.has(blacklist)) {
+            if (options.has(blacklist))
                 options.valuesOf(blacklist).forEach(merge::blacklist);
-            }
+
+            if (options.has(clientMapping))
+                merge.clientMapping(options.valueOf(clientMapping));
+
+            if (options.has(serverMapping))
+                merge.serverMapping(options.valueOf(serverMapping));
 
             try
             {
