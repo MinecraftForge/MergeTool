@@ -1,80 +1,59 @@
 /*
- * MergeTool
- * Copyright (c) 2016-2018.
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation version 2.1
- * of the License.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Copyright (c) Forge Development LLC
+ * SPDX-License-Identifier: LGPL-2.1-only
  */
 package net.minecraftforge.mergetool;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.function.Predicate;
+
 import joptsimple.OptionException;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 import joptsimple.ValueConverter;
+import net.minecraftforge.srgutils.IMappingFile;
+import net.minecraftforge.srgutils.IMappingFile.IClass;
 
-public class ConsoleMerger
-{
+public class ConsoleMerger {
     private static enum Tasks { MERGE, STRIP };
-    private static final ValueConverter<AnnotationVersion> AnnotationReader = new ValueConverter<AnnotationVersion>()
-    {
+    private static final ValueConverter<AnnotationVersion> AnnotationReader = new ValueConverter<AnnotationVersion>() {
         @Override
-        public AnnotationVersion convert(String value)
-        {
-            try
-            {
+        public AnnotationVersion convert(String value) {
+            try {
                 return AnnotationVersion.valueOf(value.toUpperCase(Locale.ENGLISH));
-            }
-            catch (IllegalArgumentException e) //Invalid argument, lets try by version, wish there was a way to know before hand.
-            {
+            } catch (IllegalArgumentException e) { //Invalid argument, lets try by version, wish there was a way to know before hand.
                 return AnnotationVersion.fromVersion(value);
             }
         }
 
         @Override
-        public Class<? extends AnnotationVersion> valueType()
-        {
+        public Class<? extends AnnotationVersion> valueType() {
             return AnnotationVersion.class;
         }
 
         @Override
-        public String valuePattern()
-        {
+        public String valuePattern() {
             return null;
         }
     };
 
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) {
         List<String> extra = new ArrayList<>();
         Tasks task = null;
 
-        for (int x = 0; x < args.length; x++)
-        {
-            if ("--strip".equals(args[x]))
-            {
+        for (int x = 0; x < args.length; x++) {
+            if ("--strip".equals(args[x])) {
                 if (task != null)
                     throw new IllegalArgumentException("Only one task supported at a time: " + task);
                 task = Tasks.STRIP;
-            }
-            else if ("--merge".equals(args[x]))
-            {
+            } else if ("--merge".equals(args[x])) {
                 if (task != null)
                     throw new IllegalArgumentException("Only one task supported at a time: " + task);
                 task = Tasks.MERGE;
@@ -89,8 +68,7 @@ public class ConsoleMerger
             strip(extra.toArray(new String[extra.size()]));
     }
 
-    private static void merge(String[] args)
-    {
+    private static void merge(String[] args) {
         OptionParser parser = new OptionParser();
         OptionSpec<File> client = parser.accepts("client").withRequiredArg().ofType(File.class).required();
         OptionSpec<File> server = parser.accepts("server").withRequiredArg().ofType(File.class).required();
@@ -99,9 +77,15 @@ public class ConsoleMerger
         OptionSpec<Void> data = parser.accepts("keep-data");
         OptionSpec<Void> meta = parser.accepts("keep-meta");
         OptionSpec<AnnotationVersion> anno = parser.accepts("ann").withOptionalArg().ofType(AnnotationVersion.class).withValuesConvertedBy(AnnotationReader).defaultsTo(AnnotationVersion.API);
+        OptionSpec<String> whitelist    = parser.accepts("whitelist").withRequiredArg().ofType(String.class);
+        OptionSpec<String> whitelistPkg = parser.accepts("whitelist-pkg").withRequiredArg().ofType(String.class);
+        OptionSpec<File>   whitelistMap = parser.accepts("whitelist-map").withRequiredArg().ofType(File.class);
+        OptionSpec<String> blacklist    = parser.accepts("blacklist").withRequiredArg().ofType(String.class);
+        OptionSpec<String> blacklistPkg = parser.accepts("blacklist-pkg").withRequiredArg().ofType(String.class);
+        OptionSpec<File>   blacklistMap = parser.accepts("blacklist-map").withRequiredArg().ofType(File.class);
+        OptionSpec<Void> bundled = parser.accepts("bundled");
 
-        try
-        {
+        try {
             OptionSet options = parser.parse(args);
 
             File client_jar = options.valueOf(client);
@@ -122,44 +106,77 @@ public class ConsoleMerger
             if (options.has(meta))
                 merge.keepMeta();
 
-            try
-            {
-                merge.process();
+            if (options.has(bundled))
+                merge.bundledServerJar();
+
+            Predicate<String> filter = null;
+            if (options.has(whitelist) || options.has(whitelistMap)) {
+                Set<String> classes = loadList(options.valuesOf(whitelist), options.valuesOf(whitelistMap));
+                if (!classes.isEmpty())
+                    filter = classes::contains;
             }
-            catch (IOException e)
-            {
-                e.printStackTrace();
+
+            if (options.has(whitelistPkg)) {
+                Set<String> pkgs = loadPackages(options.valuesOf(whitelistPkg));
+                Predicate<String> prefixes = name -> {
+                    int idx = name.lastIndexOf('/');
+                    return idx == -1 ? pkgs.contains("/") : pkgs.contains(name.substring(0, idx));
+                };
+
+                if (filter == null)
+                    filter = prefixes;
+                else
+                    filter = filter.or(prefixes);
             }
-        }
-        catch (OptionException e)
-        {
+
+            if (filter == null)
+                filter = name -> true;
+
+            if (options.has(blacklist) || options.has(blacklistMap)) {
+                Set<String> classes = loadList(options.valuesOf(blacklist), options.valuesOf(blacklistMap));
+                if (!classes.isEmpty())
+                    filter.and(name -> !classes.contains(name));
+            }
+
+            if (options.has(blacklistPkg)) {
+                Set<String> pkgs = loadPackages(options.valuesOf(blacklistPkg));
+                filter.and(name -> {
+                    int idx = name.lastIndexOf('/');
+                    return idx == -1 ? !pkgs.contains("/") : !pkgs.contains(name.substring(0, idx));
+                });
+            }
+
+            merge.filter(filter);
+
+            merge.process();
+        } catch (OptionException e) {
             System.out.println("Usage: ConsoleMerger --merge --client <ClientJar> --server <ServerJar> --output <MergedJar> [--ann CPW|NMF|API] [--keep-data] [--keep-meta]");
             e.printStackTrace();
+            sneak(e);
+        } catch (IOException e) {
+            e.printStackTrace();
+            sneak(e);
         }
     }
 
-    private static void strip(String[] args)
-    {
+    private static void strip(String[] args) {
         OptionParser parser = new OptionParser();
         OptionSpec<File> input = parser.accepts("input").withRequiredArg().ofType(File.class).required();
         OptionSpec<File> output = parser.accepts("output").withRequiredArg().ofType(File.class).required();
         OptionSpec<File> data = parser.accepts("data").withRequiredArg().ofType(File.class).required();
 
-        try
-        {
+        try {
             OptionSet options = parser.parse(args);
 
             File input_jar = options.valueOf(input).getAbsoluteFile();
             File output_jar = options.valueOf(output).getAbsoluteFile();
 
-            try
-            {
+            try {
                 System.out.println("Input:  " + input_jar);
                 System.out.println("Output: " + output_jar);
                 Stripper strip = new Stripper();
 
-                for (File dataF : options.valuesOf(data))
-                {
+                for (File dataF : options.valuesOf(data)) {
                     System.out.println("Data:   " + dataF.getAbsoluteFile());
                     strip.loadData(dataF);
                 }
@@ -168,16 +185,41 @@ public class ConsoleMerger
                     System.out.println("Could not delete output file: " + output_jar);
 
                 strip.process(input_jar, output_jar);
-            }
-            catch (IOException e)
-            {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
-        catch (OptionException e)
-        {
+        } catch (OptionException e) {
             System.out.println("Usage: ConsoleMerger --strip --input <InputJar> --output <OutputJar> --data <DataText>...");
             e.printStackTrace();
         }
+    }
+
+
+    private static Set<String> loadList(List<String> strings, List<File> files) throws IOException {
+        Set<String> classes = new HashSet<>();
+        classes.addAll(strings);
+
+        for (File value : files) {
+            IMappingFile map = IMappingFile.load(value);
+            for (IClass cls : map.getClasses())
+                classes.add(cls.getOriginal());
+        }
+
+        return classes;
+    }
+
+    private static Set<String> loadPackages(List<String> strings) {
+        Set<String> pkgs = new HashSet<>();
+        for (String value : strings) {
+            if (!value.endsWith("/"))
+                value += '/';
+            pkgs.add(value);
+        }
+        return pkgs;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <E extends Throwable, R> R sneak(Throwable e) throws E {
+        throw (E)e;
     }
 }

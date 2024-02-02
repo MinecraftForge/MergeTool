@@ -1,20 +1,6 @@
 /*
- * MergeTool
- * Copyright (c) 2016-2018.
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation version 2.1
- * of the License.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Copyright (c) Forge Development LLC
+ * SPDX-License-Identifier: LGPL-2.1-only
  */
 package net.minecraftforge.mergetool;
 
@@ -35,15 +21,19 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 
-public class Stripper
-{
+public class Stripper {
     private Set<String> classes = new HashSet<>();
     private Set<String> targets = new HashSet<>();
 
-    public void loadData(File file) throws IOException
-    {
-        Files.lines(file.toPath()).forEach(line ->
-        {
+    /*
+     * Data files list whole classes, or methods that should be stripped out.
+     * Comments are supported, anything following the # character will be stripped
+     * Empty lines are ignored.
+     * If the line starts with \t the \t will be stripped
+     * You can strip annotations from classes, or methods
+     */
+    public void loadData(File file) throws IOException {
+        Files.lines(file.toPath()).forEach(line -> {
             int idx = line.indexOf('#');
             if (idx == 0 || line.isEmpty()) return;
             if (idx != -1) line = line.substring(0, idx - 1);
@@ -57,53 +47,41 @@ public class Stripper
         });
     }
 
-    public void process(File input, File output) throws IOException
-    {
+    public void process(File input, File output) throws IOException {
         if (output.exists()) output.delete();
         if (!output.getParentFile().exists()) output.getParentFile().mkdirs();
         output.createNewFile();
 
         Set<String> types = new HashSet<>();
-        for (AnnotationVersion an : AnnotationVersion.values())
-        {
+        for (AnnotationVersion an : AnnotationVersion.values()) {
             for (String cls : an.getClasses())
                 types.add('L' + cls + ';');
         }
 
         try (ZipInputStream  zis = new ZipInputStream(new FileInputStream(input));
-             ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(output)))
-        {
+             ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(output))) {
             ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null)
-            {
+            while ((entry = zis.getNextEntry()) != null) {
                 ZipEntry next = new ZipEntry(entry.getName());
                 next.setTime(entry.getTime());
                 next.setLastModifiedTime(entry.getLastModifiedTime());
                 zos.putNextEntry(next);
-                if (!entry.getName().endsWith(".class") || !classes.contains(entry.getName().substring(0, entry.getName().length() - 6)))
-                {
+                if (!entry.getName().endsWith(".class") || !classes.contains(entry.getName().substring(0, entry.getName().length() - 6))) {
                     int read;
                     byte[] buf = new byte[0x100];
                     while ((read = zis.read(buf, 0, buf.length)) != -1)
                         zos.write(buf, 0, read);
-                }
-                else
-                {
+                } else {
                     ClassReader reader = new ClassReader(zis);
                     ClassNode node = new ClassNode();
                     reader.accept(node, 0);
 
-                    if (node.methods != null)
-                    {
-                        node.methods.forEach(mtd ->
-                        {
-                            if (targets.contains(node.name + ' ' + mtd.name + mtd.desc))
-                            {
-                                if (mtd.visibleAnnotations != null)
-                                {
+                    if (node.methods != null) {
+                        node.methods.forEach(mtd -> {
+                            if (targets.contains(node.name + ' ' + mtd.name + mtd.desc)) {
+                                if (mtd.visibleAnnotations != null) {
                                     Iterator<AnnotationNode> itr = mtd.visibleAnnotations.iterator();
-                                    while (itr.hasNext())
-                                    {
+                                    while (itr.hasNext()) {
                                         if (types.contains(itr.next().desc))
                                             itr.remove();
                                     }
@@ -112,11 +90,9 @@ public class Stripper
                         });
                     }
 
-                    if (node.visibleAnnotations != null)
-                    {
+                    if (node.visibleAnnotations != null) {
                         Iterator<AnnotationNode> itr = node.visibleAnnotations.iterator();
-                        while (itr.hasNext())
-                        {
+                        while (itr.hasNext()) {
                             if (types.contains(itr.next().desc))
                                 itr.remove();
                         }

@@ -5,10 +5,10 @@ plugins {
     id 'java'
     id 'eclipse'
     id 'maven-publish'
-    id 'org.cadixdev.licenser' version '0.6.1'
+    id 'net.minecraftforge.licenser' version '1.0.1'
     id 'com.github.johnrengelman.shadow' version '8.1.1'
-    id 'com.github.ben-manes.versions' version '0.47.0'
-    id 'net.minecraftforge.gradleutils' version '2.+'
+    id 'com.github.ben-manes.versions' version '0.51.0'
+    id 'net.minecraftforge.gradleutils' version '[2.3,2.4]'
 }
 
 group = 'net.minecraftforge'
@@ -32,12 +32,17 @@ java {
     withSourcesJar()
 }
 
-tasks.named('jar', Jar).configure {
+tasks.register('copyMarkers', Copy).configure  {
     from(configurations.markers.collect { zipTree(it) } ) {
         into 'markers'
         include '**/*.class'
         rename { it.replace('.class', '.marker') }
     }
+    includeEmptyDirs = false
+    into project.layout.buildDirectory.dir('copyMarkers')
+}
+
+tasks.named('jar', Jar).configure {
     manifest {
         attributes('Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger')
         attributes('Implementation-Version': project.version)
@@ -48,9 +53,16 @@ tasks.named('shadowJar', ShadowJar).configure {
     archiveClassifier = 'fatjar'
 }
 
+sourceSets {
+    main {
+        resources {
+            srcDirs += [tasks.named('copyMarkers')]
+        }
+    }
+}
+
 configurations {
     markers
-    implementation.extendsFrom(markers)
 }
 
 dependencies {
@@ -58,15 +70,11 @@ dependencies {
     implementation 'org.ow2.asm:asm-tree:9.5'
     implementation 'org.ow2.asm:asm-util:9.5'
     implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
-    implementation 'net.minecraftforge:srgutils:0.4.15'
-    
+    implementation 'net.minecraftforge:srgutils:0.5.7'
+
     markers 'net.minecraftforge:mergetool-cpw:1.0'
     markers 'net.minecraftforge:mergetool-fml:1.0'
     markers 'net.minecraftforge:mergetool-api:1.0'
-}
-
-artifacts {
-    archives shadowJar
 }
 
 publishing {
@@ -79,7 +87,7 @@ publishing {
             name = 'MergeTool'
             description = 'Merges two jar files together, useful for rebuilding Retroguard stripped jars.'
             url = 'https://github.com/MinecraftForge/MergeTool'
-            
+
             PomUtils.setGitHubDetails(pom, 'MergeTool')
 
             license PomUtils.Licenses.LGPLv2_1
@@ -89,8 +97,8 @@ publishing {
             }
         }
     }
-    
+
     repositories {
-        maven gradleutils.getPublishingForgeMaven()
+        maven gradleutils.publishingForgeMaven
     }
 }
