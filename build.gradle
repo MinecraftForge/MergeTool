@@ -66,11 +66,9 @@ configurations {
 }
 
 dependencies {
-    implementation 'org.ow2.asm:asm:9.5'
-    implementation 'org.ow2.asm:asm-tree:9.5'
-    implementation 'org.ow2.asm:asm-util:9.5'
-    implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
-    implementation 'net.minecraftforge:srgutils:0.5.7'
+    implementation(libs.bundles.asm)
+    implementation(libs.jopt.simple)
+    implementation(libs.srgutils)
 
     markers 'net.minecraftforge:mergetool-cpw:1.0'
     markers 'net.minecraftforge:mergetool-fml:1.0'

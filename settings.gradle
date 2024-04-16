@@ -12,4 +12,20 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.7.0'
 }
 
+dependencyResolutionManagement {
+    versionCatalogs {
+        libs {
+            library('jopt-simple', 'net.sf.jopt-simple:jopt-simple:6.0-alpha-3')
+            library('srgutils', 'net.minecraftforge:srgutils:0.5.10')
+
+            version('asm', '9.7')
+            library('asm',         'org.ow2.asm', 'asm'        ).versionRef('asm')
+            library('asm-commons', 'org.ow2.asm', 'asm-commons').versionRef('asm')
+            library('asm-tree',    'org.ow2.asm', 'asm-tree'   ).versionRef('asm')
+            library('asm-util',    'org.ow2.asm', 'asm-util'   ).versionRef('asm')
+            bundle('asm', ['asm', 'asm-commons', 'asm-tree', 'asm-util'])
+        }
+    }
+}
+
 rootProject.name = 'MergeTool'
