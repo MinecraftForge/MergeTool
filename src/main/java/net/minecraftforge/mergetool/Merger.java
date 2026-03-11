@@ -59,6 +59,7 @@ public class Merger {
     private boolean copyData = false;
     private boolean keepMeta = false;
     private boolean bundledServerJar = false;
+    private boolean sortInterfaces = false;
 
     public Merger(File client, File server, File merged) {
         this.client = client;
@@ -108,6 +109,11 @@ public class Merger {
 
     public Merger bundledServerJar() {
         this.bundledServerJar = true;
+        return this;
+    }
+
+    public Merger sortInterfaces() {
+        this.sortInterfaces = true;
         return this;
     }
 
@@ -349,8 +355,10 @@ public class Merger {
             }
         }
 
-        Collections.sort(cIntfs); //Sort things, we're in obf territory but should stabilize things.
-        Collections.sort(sIntfs);
+        if (sortInterfaces) {
+            Collections.sort(cIntfs); //Sort things, we're in obf territory but should stabilize things.
+            Collections.sort(sIntfs);
+        }
 
         if (this.annotation != null && !cOnly.isEmpty() || !sOnly.isEmpty()) {
             this.annotation.add(cClass, cOnly, sOnly);

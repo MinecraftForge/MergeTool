@@ -76,6 +76,7 @@ public class ConsoleMerger {
         OptionSpec<Boolean> inject = parser.accepts("inject").withOptionalArg().ofType(Boolean.class).defaultsTo(true);
         OptionSpec<Void> data = parser.accepts("keep-data");
         OptionSpec<Void> meta = parser.accepts("keep-meta");
+        OptionSpec<Void> sortInterfaces = parser.accepts("sort-interfaces");
         OptionSpec<AnnotationVersion> anno = parser.accepts("ann").withOptionalArg().ofType(AnnotationVersion.class).withValuesConvertedBy(AnnotationReader).defaultsTo(AnnotationVersion.API);
         OptionSpec<String> whitelist    = parser.accepts("whitelist").withRequiredArg().ofType(String.class);
         OptionSpec<String> whitelistPkg = parser.accepts("whitelist-pkg").withRequiredArg().ofType(String.class);
@@ -108,6 +109,9 @@ public class ConsoleMerger {
 
             if (options.has(bundled))
                 merge.bundledServerJar();
+
+            if (options.has(sortInterfaces))
+                merge.sortInterfaces();
 
             Predicate<String> filter = null;
             if (options.has(whitelist) || options.has(whitelistMap)) {
