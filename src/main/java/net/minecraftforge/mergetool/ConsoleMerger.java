@@ -1,20 +1,6 @@
 /*
- * MergeTool
- * Copyright (c) 2016-2018.
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation version 2.1
- * of the License.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Copyright (c) Forge Development LLC
+ * SPDX-License-Identifier: LGPL-2.1-only
  */
 package net.minecraftforge.mergetool;
 
@@ -97,6 +83,7 @@ public class ConsoleMerger
         OptionSpec<File> merged = parser.accepts("output").withRequiredArg().ofType(File.class).required();
         OptionSpec<Boolean> inject = parser.accepts("inject").withOptionalArg().ofType(Boolean.class).defaultsTo(true);
         OptionSpec<AnnotationVersion> anno = parser.accepts("ann").withOptionalArg().ofType(AnnotationVersion.class).withValuesConvertedBy(AnnotationReader).defaultsTo(AnnotationVersion.API);
+        OptionSpec<Void> data = parser.accepts("keep-data");
 
         try
         {
@@ -113,6 +100,9 @@ public class ConsoleMerger
 
             if (options.has(anno))
                 merge.annotate(options.valueOf(anno), !options.has(inject) || options.valueOf(inject));
+
+            if (options.has(data))
+                merge.keepData();
 
             try
             {

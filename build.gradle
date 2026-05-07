@@ -1,33 +1,26 @@
 plugins {
-  id 'net.minecrell.licenser' version '0.4'
-  id 'org.ajoberstar.grgit' version '3.0.0'
-  id 'com.github.johnrengelman.shadow' version '2.0.4'
-  id 'com.github.ben-manes.versions' version '0.22.0'
+	id 'java'
+	id 'maven-publish'
+	alias libs.plugins.changelog
+	alias libs.plugins.gitversion
+	alias libs.plugins.gradleutils
+	alias libs.plugins.licenser
+	alias libs.plugins.shadow
 }
 
-apply plugin: 'java'
-apply plugin: 'eclipse'
-apply plugin: 'maven'
-apply plugin: 'maven-publish'
-
+gradleutils.displayName = 'MergeTool'
+description = 'Merges two jar files together, useful for rebuilding Retroguard stripped jars.'
 group = 'net.minecraftforge'
-version = gitVersion()
-targetCompatibility = sourceCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
+version = gitversion.tagOffset
+println "Version: $version"
+
+java {
+	toolchain.languageVersion = JavaLanguageVersion.of(8)
+	withSourcesJar()
+}
 
 repositories {
     mavenCentral()
-}
-
-def gitVersion() {
-    def raw = grgit.describe(longDescr: true, tags:true)
-    def desc = (raw == null ? '0.0-0-unknown' : grgit.describe(longDescr: true, tags:true)).split('-') as List
-    def hash = desc.remove(desc.size() - 1)
-    def offset = desc.remove(desc.size() - 1)
-    def tag = desc.join('-')
-    def branch = grgit.branch.current().name
-	if (tag.startsWith(branch))
-		branch = 'master'
-    return "${tag}.${offset}${t -> if (branch != 'master') t << '-' + branch}"
 }
 
 license {
@@ -36,19 +29,26 @@ license {
   newLine false
 }
 
-jar {
-    manifest.attributes('Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger')
-    manifest.attributes('Implementation-Version': project.version)
+tasks.named('jar', Jar) {
+	manifest {
+		attributes([
+			'Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger',
+			'Automatic-Module-Name': 'net.minecraftforge.mergetool'
+		])
+		gradleutils.manifestDefaults(it, 'net/minecraftforge/mergetool/')
+	}
 }
-shadowJar {
-    classifier 'fatjar'
-    manifest.attributes('Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger')
-    manifest.attributes('Implementation-Version': project.version)
+tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+	archiveClassifier = 'fatjar'
+	manifest {
+		attributes([
+			'Main-Class': 'net.minecraftforge.mergetool.ConsoleMerger',
+			'Automatic-Module-Name': 'net.minecraftforge.mergetool'
+		])
+		gradleutils.manifestDefaults(it, 'net/minecraftforge/mergetool/')
+	}
 }
-task sourcesJar(type: Jar) {
-    classifier = 'sources'
-    from sourceSets.main.allSource
-}
+/*
 task cpwFML(type: Jar) {
     classifier 'cpw'
     from (sourceSets.main.output) {
@@ -67,74 +67,41 @@ task forgeAPI(type: Jar) {
         include 'net/minecraftforge/api/distmarker/**'
     }
 }
-artifacts {
-    archives jar
-	archives sourcesJar
-    archives shadowJar
-    archives cpwFML
-    archives forgeFML
-    archives forgeAPI
-}
+*/
 
 dependencies {
-    implementation 'org.ow2.asm:asm:6.0'
-    implementation 'org.ow2.asm:asm-tree:6.0'
-    implementation 'org.ow2.asm:asm-util:6.0'
-    implementation 'net.sf.jopt-simple:jopt-simple:5.0.4'
+    implementation libs.bundles.asm
+    implementation libs.jopt
 }
 
-configurations { deployJars }
-
 publishing {
+	repositories {
+		maven gradleutils.publishingForgeMaven
+	}
 	publications {
 		mavenJava(MavenPublication) {
-			from components.java
-			artifact sourcesJar
-			artifact shadowJar
+			from components.shadow
+			changelog.publish(it)
+			gradleutils.promote(it)
+			/*
 			artifact cpwFML
 			artifact forgeFML
 			artifact forgeAPI
+			*/
 
-			pom {
-				name = 'MergeTool'
-				description = 'Merges two jar files together, useful for rebuilding Retroguard stripped jars.'
-				url = 'https://github.com/MinecraftForge/MergeTool'
-				scm {
-					url = 'https://github.com/MinecraftForge/MergeTool'
-					connection = 'scm:git:git://github.com/MinecraftForge/MergeTool.git'
-					developerConnection = 'scm:git:git@github.com:MinecraftForge/MergeTool.git'
-				}
-				issueManagement {
-					system = 'github'
-					url = 'https://github.com/MinecraftForge/MergeTool/issues'
-				}
+			pom { pom ->
+				name = gradleutils.displayName
+				description = project.description
+
+				gradleutils.pom.addRemoteDetails(pom)
 
 				licenses {
-					license {
-						name = 'LGPLv2.1'
-						url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
-					}
+					license gradleutils.pom.licenses.LGPLv2_1
 				}
 
 				developers {
-					developer {
-						id = 'LexManos'
-						name = 'Lex Manos'
-					}
+					developer gradleutils.pom.developers.LexManos
 				}
-			}
-		}
-	}
-	repositories {
-		maven {
-			if (project.hasProperty('forgeMavenPassword')) {
-				credentials {
-					username project.properties.forgeMavenUser
-					password project.properties.forgeMavenPassword
-				}
-				url 'https://files.minecraftforge.net/maven/manage/upload'
-			} else {
-				url 'file://' + rootProject.file('repo').getAbsolutePath()
 			}
 		}
 	}
